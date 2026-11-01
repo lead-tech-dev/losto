@@ -31,20 +31,46 @@ interface Unpaid {
   medications: { prescriptionId: string; patient: string; priceXaf: number | null; since: string; payer: string; email: string }[];
 }
 
+interface Signup {
+  patientId: string;
+  patient: string;
+  city: string;
+  district: string;
+  plan: string;
+  stage: 'CONSENT' | 'PAYMENT' | 'ZONE';
+  stopped: boolean;
+  since: string;
+  days: number;
+  reminders: number;
+  lastReminderAt: string | null;
+  lastFailure: string | null;
+  family: string;
+  email: string;
+  phone: string | null;
+}
+
+const STAGE: Record<Signup['stage'], { label: string; badge: string }> = {
+  CONSENT: { label: 'Accord du parent', badge: 'badge-warn' },
+  PAYMENT: { label: 'Premier paiement', badge: 'badge-warn' },
+  ZONE: { label: 'Quartier non desservi', badge: '' },
+};
+
 const STATUS: Record<string, string> = { PENDING: 'En cours', SUCCEEDED: 'Réussi', FAILED: 'Échoué', CANCELED: 'Annulé', REFUNDED: 'Remboursé' };
 const amountOf = (p: Pay) => (p.currency === 'EUR' ? `${(p.amount / 100).toFixed(2).replace('.', ',')} €` : fmtXaf(p.amount));
 
 export default function AdminPayments() {
   const [params, setParams] = useSearchParams();
-  const tab = params.get('onglet') === 'impayes' ? 'unpaid' : 'list';
+  const onglet = params.get('onglet');
+  const tab = onglet === 'impayes' ? 'unpaid' : onglet === 'inscriptions' ? 'signups' : 'list';
   return (
     <Layout>
       <h1>Paiements</h1>
       <div className="tabs" role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'list'} className={`tab ${tab === 'list' ? 'on' : ''}`} onClick={() => setParams({})}>Tous les paiements</button>
         <button type="button" role="tab" aria-selected={tab === 'unpaid'} className={`tab ${tab === 'unpaid' ? 'on' : ''}`} onClick={() => setParams({ onglet: 'impayes' })}>Impayés</button>
+        <button type="button" role="tab" aria-selected={tab === 'signups'} className={`tab ${tab === 'signups' ? 'on' : ''}`} onClick={() => setParams({ onglet: 'inscriptions' })}>Inscriptions non payées</button>
       </div>
-      {tab === 'list' ? <PaymentList /> : <UnpaidList />}
+      {tab === 'list' ? <PaymentList /> : tab === 'unpaid' ? <UnpaidList /> : <SignupList />}
     </Layout>
   );
 }
@@ -225,5 +251,54 @@ function UnpaidList() {
         </ul>
       </section>
     </>
+  );
+}
+
+// Inscriptions jamais payées : les familles reçoivent 3 relances automatiques (J+1, J+3, J+7) ; ensuite, on les appelle.
+function SignupList() {
+  const { data } = useApi<{ pending: Signup[]; conversion: { signups: number; paid: number; rate: number | null } }>('/admin/signups');
+  if (!data) return <p className="muted">Chargement…</p>;
+  const toCall = data.pending.filter((s) => s.reminders >= 3 || s.stopped);
+  const rest = data.pending.filter((s) => !toCall.includes(s));
+  const { signups, paid, rate } = data.conversion;
+  return (
+    <>
+      <p className="muted small">
+        30 derniers jours : {signups} inscription{signups > 1 ? 's' : ''}, {paid} payée{paid > 1 ? 's' : ''}
+        {rate !== null && <> ({Math.round(rate * 100)} %)</>}. Relances automatiques à J+1, J+3 et J+7 de chaque étape.
+      </p>
+      <section className="card">
+        <h2>À appeler ({toCall.length})</h2>
+        <p className="muted small">Trois relances sans réponse, ou parent qui a répondu STOP au message de bienvenue.</p>
+        {toCall.length === 0 && <p className="muted">Aucune.</p>}
+        <SignupItems items={toCall} />
+      </section>
+      <section className="card">
+        <h2>En cours de relance ({rest.length})</h2>
+        {rest.length === 0 && <p className="muted">Aucune.</p>}
+        <SignupItems items={rest} />
+      </section>
+    </>
+  );
+}
+
+function SignupItems({ items }: { items: Signup[] }) {
+  return (
+    <ul className="plain">
+      {items.map((s) => (
+        <li key={s.patientId} className="unpaid">
+          <span className={`badge ${STAGE[s.stage].badge}`}>{STAGE[s.stage].label}</span>{' '}
+          {s.stopped && <span className="badge badge-urgent">STOP</span>}{' '}
+          <strong>{s.patient}</strong> · {s.district} · {PLAN_LABELS[s.plan]} · {s.days === 0 ? 'aujourd’hui' : `depuis ${s.days} j`}
+          {s.stage !== 'ZONE' && <> · {s.reminders}/3 relance{s.reminders > 1 ? 's' : ''}</>}
+          {s.lastFailure && <> · dernier paiement échoué : {s.lastFailure}</>}
+          <br />
+          <span className="small">
+            {s.family} · <a href={`mailto:${s.email}`}>{s.email}</a>
+            {s.phone && <> · <a href={`tel:${s.phone}`}>{s.phone}</a></>} · {s.stage === 'CONSENT' ? 'inscrit le' : 'accord le'} {fmtDate(s.since)}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

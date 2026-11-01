@@ -1,5 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { SignupFollowupService } from '../billing/signup-followup.service';
 import { AuthUser, CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../db/schema';
@@ -41,6 +42,7 @@ export class BackofficeController {
   constructor(
     private readonly bo: BackofficeService,
     private readonly statements: StatementsService,
+    private readonly signups: SignupFollowupService,
   ) {}
 
   @Get('overview')
@@ -71,6 +73,12 @@ export class BackofficeController {
   @Get('unpaid')
   unpaid() {
     return this.bo.unpaid();
+  }
+
+  // Inscriptions jamais payées : étape bloquante, relances envoyées, contact de la famille
+  @Get('signups')
+  async signupsPending() {
+    return { pending: await this.signups.list(), conversion: await this.signups.conversion() };
   }
 
   @Post('payments/:id/refund')

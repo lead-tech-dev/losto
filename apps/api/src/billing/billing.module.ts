@@ -9,6 +9,7 @@ import { BillingController, WebhooksController } from './billing.controller';
 import { BillingService } from './billing.service';
 import { StripeClient, StripeGateway } from './gateways/stripe.client';
 import { TranzakClient, TranzakGateway } from './gateways/tranzak.client';
+import { SignupFollowupService } from './signup-followup.service';
 import { StripeEventsService } from './stripe-events.service';
 
 @Module({
@@ -18,6 +19,7 @@ import { StripeEventsService } from './stripe-events.service';
     BillingService,
     StripeEventsService,
     BillingCronService,
+    SignupFollowupService,
     // Les tests remplacent ces deux classes par des versions simulées
     { provide: StripeGateway, useClass: StripeClient },
     {
@@ -32,6 +34,6 @@ import { StripeEventsService } from './stripe-events.service';
       },
     },
   ],
-  exports: [BillingService, StripeGateway],
+  exports: [BillingService, StripeGateway, SignupFollowupService],
 })
 export class BillingModule {}

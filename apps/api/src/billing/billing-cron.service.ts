@@ -6,6 +6,7 @@ import { Database, DB } from '../db/db.module';
 import { subscriptions } from '../db/schema';
 import { eurToXaf, PLAN_PRICES_EUR } from '../patients/plans';
 import { BillingService } from './billing.service';
+import { SignupFollowupService } from './signup-followup.service';
 import { DAY_MS, fmtDay, fmtXaf } from './billing.util';
 
 // Rappels et relances Mobile Money (la carte est renouvelée et relancée par Stripe).
@@ -26,6 +27,7 @@ export class BillingCronService {
   constructor(
     @Inject(DB) private readonly db: Database,
     private readonly billing: BillingService,
+    private readonly signups: SignupFollowupService,
   ) {}
 
   // Tous les jours à 8 h, heure du Cameroun
@@ -33,6 +35,13 @@ export class BillingCronService {
   async daily() {
     const summary = await this.runDaily(new Date());
     this.logger.log(`Facturation quotidienne : ${JSON.stringify(summary)}`);
+  }
+
+  // Relance des inscriptions non payées : 10 h au Cameroun, 10 h ou 11 h en France
+  @Cron('0 10 * * *', { timeZone: 'Africa/Douala' })
+  async signupFollowups() {
+    const summary = await this.signups.runDaily(new Date());
+    this.logger.log(`Relance des inscriptions : ${JSON.stringify(summary)}`);
   }
 
   async runDaily(now: Date) {
