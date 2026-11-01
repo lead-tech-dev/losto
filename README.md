@@ -166,6 +166,10 @@ Sous-menu réservé au rôle `ADMIN` :
 
 **Tarifs partenaires** (`apps/api/src/backoffice/rates.ts`, valeurs de départ **à négocier**, modifiables par variables d'environnement) : bilan de départ 8 000 FCFA, consultation 5 000, visite à domicile 5 000, livraison 1 500 (passage manqué 500), prise de sang à domicile 2 000. Les pharmacies reçoivent le prix des médicaments payé par les familles. Coût estimé d'un message WhatsApp : 15 FCFA (`WHATSAPP_COST_XAF`).
 
+## Mise en ligne
+
+Phase de test sur des offres gratuites : site sur **Vercel**, API sur **Render**, base **Neon** (Francfort). Pas à pas dans [DEPLOY.md](DEPLOY.md). L'API applique les migrations et crée le premier admin à chaque démarrage (`npm run start:prod`), et refuse de démarrer en production avec une configuration dangereuse (`apps/api/src/common/env-check.ts`).
+
 ## Modifier le schéma
 
 1. Modifie `apps/api/src/db/schema.ts`.
@@ -189,4 +193,4 @@ DATABASE_URL="postgresql://losto:losto@localhost:5432/losto_test" npm test
 - [x] Module 5 : pharmacie, laboratoire et livraison (prix, paiement, préparation, livraison contre code, prises de sang, résultats relus par le médecin)
 - [x] Module 6 : WhatsApp (relevés par message, urgences, rappels, code de livraison, comptes rendus mensuels, assistant)
 - [x] Module 7 : back-office et indicateurs (tableau de bord, retards, parents et équipes, paiements et remboursements, relevés partenaires, indicateurs, journal, zones)
-- [ ] Module 8 : mise en production
+- [ ] Module 8 : mise en production (fait : déploiement gratuit Vercel + Render + Neon, contrôles de démarrage, intégration continue ; reste : pages légales, chiffrement des champs sensibles, export et effacement des données, surveillance, VPS)

@@ -1,0 +1,74 @@
+# Blueprint Render — hébergement gratuit de la phase de test (API).
+# Le site est sur Vercel (apps/web/vercel.json), la base sur Neon (Postgres gratuit, Francfort) :
+# DATABASE_URL est saisie à la création du Blueprint. Guide complet : DEPLOY.md.
+# Offre gratuite : l'API s'endort après 15 min sans visite (~1 min au réveil) ; le workflow
+# .github/workflows/keep-alive.yml la garde éveillée, ce qui fait aussi tourner les rappels WhatsApp.
+services:
+  - type: web
+    name: proche-sante-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      # Adresse du site (Vercel) : liens des e-mails et WhatsApp, CORS
+      - key: WEB_ORIGIN
+        value: https://proche-sante.vercel.app
+      # Premier compte admin, créé au premier démarrage (12 caractères minimum)
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+      # Base Neon gratuite : 100 h de calcul par mois. Les rappels ne réveillent la base
+      # que de 6 h à 22 h (heure du Cameroun), toutes les 15 minutes.
+      - key: REMINDERS_CRON
+        value: '*/15 6-21 * * *'
+      # E-mails (ex. Brevo, offre gratuite de 300 e-mails par jour)
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: '587'
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      # Paiements : tout passe par Tranzak (Startup Valley). Pas de Stripe : l'option carte reste masquée.
+      - key: TRANZAK_APP_ID
+        sync: false
+      - key: TRANZAK_APP_KEY
+        sync: false
+      - key: TRANZAK_ENV
+        value: production
+      - key: TRANZAK_WEBHOOK_AUTH_KEY
+        sync: false
+      # Factures émises par Startup Valley
+      - key: INVOICE_ISSUER_NAME
+        value: Startup Valley
+      - key: INVOICE_ISSUER_DETAILS
+        sync: false
+      - key: INVOICE_LEGAL_NOTE
+        sync: false
+      # WhatsApp (API Cloud de Meta)
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        generateValue: true
+      - key: VIDEO_BASE_URL
+        value: https://meet.jit.si

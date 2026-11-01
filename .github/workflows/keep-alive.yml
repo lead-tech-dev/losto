@@ -1,0 +1,19 @@
+name: Keep-alive API
+
+# L'offre gratuite Render endort l'API après 15 min sans visite : les rappels WhatsApp et les
+# tâches quotidiennes ne tourneraient plus. Un appel toutes les 10 min la garde éveillée
+# (~744 h/mois sur les 750 h gratuites : un seul service gratuit éveillé par compte Render).
+# /api/health ne touche pas la base : la base Neon peut s'endormir entre deux rappels.
+# À supprimer au passage sur le VPS.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /api/health
+        run: curl -fsS -m 90 --retry 2 https://proche-sante-api.onrender.com/api/health

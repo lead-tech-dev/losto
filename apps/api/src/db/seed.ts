@@ -16,15 +16,19 @@ const STARTER_ZONES: Record<Exclude<City, 'OTHER'>, string[]> = {
 async function main() {
   const email = (process.env.SEED_ADMIN_EMAIL ?? '').trim().toLowerCase();
   const password = process.env.SEED_ADMIN_PASSWORD ?? '';
-  if (!email || password.length < 8) {
-    throw new Error('Définir SEED_ADMIN_EMAIL et SEED_ADMIN_PASSWORD (8 caractères minimum) dans .env');
+  const withAdmin = Boolean(email && password.length >= 8);
+  if (!withAdmin) {
+    // Au démarrage en production : sans ces variables, on ne crée pas d'admin (les quartiers sont quand même ajoutés)
+    console.log('SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD absents ou trop courts : aucun admin créé');
   }
 
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const db = drizzle(pool);
   try {
-    const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    if (existing) {
+    const [existing] = withAdmin ? await db.select().from(users).where(eq(users.email, email)).limit(1) : [];
+    if (!withAdmin) {
+      // rien à faire
+    } else if (existing) {
       console.log(`Admin déjà présent : ${email}`);
     } else {
       await db.insert(users).values({

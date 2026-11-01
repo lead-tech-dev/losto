@@ -46,6 +46,7 @@ export default function ConsentPage() {
                 {p.familyName} recevra les comptes rendus de vos consultations et vos relevés de tension ou de glycémie
                 ;
               </li>
+              <li>vos informations de santé sont protégées, hébergées de façon sécurisée en Europe (Allemagne) et vues seulement par votre équipe soignante et votre famille ;</li>
               <li>vous pourrez arrêter à tout moment en nous écrivant sur WhatsApp.</li>
             </ul>
             <button type="button" className="btn btn-big" onClick={accept}>

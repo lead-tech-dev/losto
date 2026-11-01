@@ -24,7 +24,9 @@ export class RemindersService {
     private readonly wa: WhatsAppService,
   ) {}
 
-  @Cron('*/5 * * * *', { name: 'whatsapp-reminders' })
+  // Cadence réglable : en production gratuite (base Neon qui s'endort), REMINDERS_CRON="*/15 6-21 * * *"
+  // limite les réveils de la base aux heures utiles. Les fenêtres d'envoi (30 min) restent couvertes.
+  @Cron(process.env.REMINDERS_CRON || '*/5 * * * *', { name: 'whatsapp-reminders', timeZone: 'Africa/Douala' })
   async tick() {
     if (process.env.NODE_ENV === 'test') return;
     const now = new Date();
