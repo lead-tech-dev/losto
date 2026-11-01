@@ -6,8 +6,12 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
-import { HealthController } from './health.controller';
+import { CoverageModule } from './coverage/coverage.module';
 import { DbModule } from './db/db.module';
+import { HealthController } from './health.controller';
+import { MailModule } from './mail/mail.module';
+import { MessagesModule } from './messages/messages.module';
+import { PatientsModule } from './patients/patients.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -16,9 +20,13 @@ import { UsersModule } from './users/users.module';
     // Limite à 100 requêtes par minute et par adresse IP (protège contre le bourrage de mots de passe)
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     DbModule,
+    MailModule,
     AuditModule,
     AuthModule,
     UsersModule,
+    CoverageModule,
+    PatientsModule,
+    MessagesModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth';
 import Layout from '../components/Layout';
+import FamilyHome from './family/FamilyHome';
 
 // Contenu d'accueil selon le rôle. Chaque espace sera rempli par les modules suivants.
 const SPACES: Record<string, { title: string; text: string; next: string }> = {
@@ -39,6 +40,7 @@ const SPACES: Record<string, { title: string; text: string; next: string }> = {
 export default function Dashboard() {
   const { user } = useAuth();
   if (!user) return null;
+  if (user.role === 'FAMILY') return <FamilyHome firstName={user.firstName} />;
   const space = SPACES[user.role];
 
   return (
@@ -49,9 +51,14 @@ export default function Dashboard() {
         <p>{space.text}</p>
         <p className="muted small">À venir : {space.next}</p>
         {user.role === 'ADMIN' && (
-          <Link className="btn" to="/admin/comptes">
-            Gérer les comptes
-          </Link>
+          <div className="row">
+            <Link className="btn" to="/admin/comptes">
+              Gérer les comptes
+            </Link>
+            <Link className="btn btn-ghost" to="/admin/messages">
+              Messages des familles
+            </Link>
+          </div>
         )}
       </section>
     </Layout>

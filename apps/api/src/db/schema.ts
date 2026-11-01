@@ -27,21 +27,21 @@ export type City = (typeof CITIES)[number];
 
 export const roleEnum = pgEnum('role', ROLES);
 export const cityEnum = pgEnum('city', CITIES);
-export const conditionEnum = pgEnum('condition', [
-  'DIABETES',
-  'HYPERTENSION',
-  'CHOLESTEROL',
-  'ASTHMA',
-  'THYROID',
-  'SENIOR_FOLLOWUP',
-]);
-export const planEnum = pgEnum('plan', ['ESSENTIEL', 'SERENITE']); // 25 € / 45 € par mois
+export const CONDITIONS = ['DIABETES', 'HYPERTENSION', 'CHOLESTEROL', 'ASTHMA', 'THYROID', 'SENIOR_FOLLOWUP'] as const;
+export type Condition = (typeof CONDITIONS)[number];
+export const PLANS = ['ESSENTIEL', 'SERENITE'] as const; // 25 € / 45 € par mois
+export type Plan = (typeof PLANS)[number];
+export const READING_TYPES = ['BLOOD_PRESSURE', 'GLUCOSE', 'WEIGHT'] as const;
+export type ReadingType = (typeof READING_TYPES)[number];
+
+export const conditionEnum = pgEnum('condition', CONDITIONS);
+export const planEnum = pgEnum('plan', PLANS);
 export const subscriptionStatusEnum = pgEnum('subscription_status', ['PENDING', 'ACTIVE', 'PAST_DUE', 'CANCELED']);
 export const consultationModeEnum = pgEnum('consultation_mode', ['VIDEO', 'PHONE']);
 export const consultationStatusEnum = pgEnum('consultation_status', ['SCHEDULED', 'DONE', 'MISSED', 'CANCELED']);
 export const prescriptionStatusEnum = pgEnum('prescription_status', ['SENT', 'PREPARING', 'READY', 'DELIVERED', 'CANCELED']);
 export const deliveryStatusEnum = pgEnum('delivery_status', ['PENDING', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'FAILED']);
-export const readingTypeEnum = pgEnum('reading_type', ['BLOOD_PRESSURE', 'GLUCOSE', 'WEIGHT']);
+export const readingTypeEnum = pgEnum('reading_type', READING_TYPES);
 export const readingSourceEnum = pgEnum('reading_source', ['WHATSAPP', 'NURSE', 'DOCTOR']);
 
 // Colonnes de dates réutilisées partout
@@ -99,11 +99,89 @@ export const patients = pgTable(
     district: text('district').notNull(), // quartier, pour la livraison
     addressDetails: text('address_details'),
     conditions: conditionEnum('conditions').array().notNull().default(sql`'{}'`),
+    medicalHistory: text('medical_history'), // antécédents
+    currentTreatments: text('current_treatments'), // traitements déclarés à l'inscription
     notes: text('notes'),
+    // Consentement : le parent confirme lui-même (lien envoyé par WhatsApp) qu'il accepte d'être suivi
+    consentToken: text('consent_token').notNull().unique(),
+    consentGivenAt: timestamp('consent_given_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [index('patients_family_idx').on(t.familyUserId)],
+);
+
+// Autres membres de la famille qui consultent le même parent (lecture seule)
+export const patientMembers = pgTable(
+  'patient_members',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    patientId: uuid('patient_id')
+      .notNull()
+      .references(() => patients.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('patient_members_uq').on(t.patientId, t.userId)],
+);
+
+// Invitation envoyée par e-mail à un membre de la famille
+export const invitations = pgTable('invitations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  patientId: uuid('patient_id')
+    .notNull()
+    .references(() => patients.id, { onDelete: 'cascade' }),
+  invitedById: uuid('invited_by_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  email: text('email').notNull(),
+  tokenHash: text('token_hash').notNull().unique(), // on ne garde que l'empreinte du jeton
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+// Messagerie : un fil par compte famille, avec l'équipe Proche Santé
+export const messages = pgTable(
+  'messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    familyUserId: uuid('family_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
+    fromTeam: boolean('from_team').notNull(),
+    body: text('body').notNull(),
+    readAt: timestamp('read_at', { withTimezone: true }), // lu par le destinataire
+    createdAt: createdAt(),
+  },
+  (t) => [index('messages_family_idx').on(t.familyUserId, t.createdAt)],
+);
+
+// Quartiers où le service est disponible (médecin, pharmacie et livreur présents)
+export const coverageZones = pgTable(
+  'coverage_zones',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    city: cityEnum('city').notNull(),
+    district: text('district').notNull(), // nom affiché : "Bonapriso"
+    districtKey: text('district_key').notNull(), // nom normalisé pour la comparaison : "bonapriso"
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('coverage_zones_uq').on(t.city, t.districtKey)],
 );
 
 export const subscriptions = pgTable('subscriptions', {
@@ -222,3 +300,4 @@ export const auditLogs = pgTable(
 
 export type User = typeof users.$inferSelect;
 export type PartnerProfile = typeof partnerProfiles.$inferSelect;
+export type Patient = typeof patients.$inferSelect;

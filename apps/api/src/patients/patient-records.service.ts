@@ -1,0 +1,192 @@
+import { Inject, Injectable } from '@nestjs/common';
+import { and, asc, desc, eq, gte, ne } from 'drizzle-orm';
+import { AuditService } from '../audit/audit.service';
+import { Database, DB } from '../db/db.module';
+import {
+  consultations,
+  deliveries,
+  monthlyReports,
+  prescriptions,
+  readings,
+  ReadingType,
+  READING_TYPES,
+  users,
+} from '../db/schema';
+import { PatientAccessService } from './patient-access.service';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Ce que la famille voit du suivi médical de son parent. Les données sont écrites par les modules 4 à 6
+// (médecin, pharmacie, livreur, WhatsApp) ; ici on ne fait que les lire, avec contrôle d'accès.
+@Injectable()
+export class PatientRecordsService {
+  constructor(
+    @Inject(DB) private readonly db: Database,
+    private readonly access: PatientAccessService,
+    private readonly audit: AuditService,
+  ) {}
+
+  async dashboard(userId: string, patientId: string) {
+    const { patient } = await this.access.resolve(userId, patientId);
+    await this.audit.log(userId, 'patient.dashboard', 'Patient', patientId);
+
+    const [next] = await this.db
+      .select({
+        id: consultations.id,
+        scheduledAt: consultations.scheduledAt,
+        mode: consultations.mode,
+        doctorFirstName: users.firstName,
+        doctorLastName: users.lastName,
+      })
+      .from(consultations)
+      .innerJoin(users, eq(users.id, consultations.doctorId))
+      .where(
+        and(
+          eq(consultations.patientId, patientId),
+          eq(consultations.status, 'SCHEDULED'),
+          gte(consultations.scheduledAt, new Date()),
+        ),
+      )
+      .orderBy(asc(consultations.scheduledAt))
+      .limit(1);
+
+    // Dernier relevé de chaque type (tension, glycémie, poids)
+    const latestReadings = await Promise.all(
+      READING_TYPES.map(async (type) => {
+        const [r] = await this.db
+          .select()
+          .from(readings)
+          .where(and(eq(readings.patientId, patientId), eq(readings.type, type)))
+          .orderBy(desc(readings.measuredAt))
+          .limit(1);
+        return r ? toReading(r) : null;
+      }),
+    );
+
+    // Traitement en cours = dernière ordonnance non annulée ; à défaut, ce que la famille a déclaré à l'inscription
+    const [lastPrescription] = await this.db
+      .select({ items: prescriptions.items, createdAt: prescriptions.createdAt })
+      .from(prescriptions)
+      .innerJoin(consultations, eq(consultations.id, prescriptions.consultationId))
+      .where(and(eq(consultations.patientId, patientId), ne(prescriptions.status, 'CANCELED')))
+      .orderBy(desc(prescriptions.createdAt))
+      .limit(1);
+
+    const recentDeliveries = await this.db
+      .select({
+        id: deliveries.id,
+        status: deliveries.status,
+        deliveredAt: deliveries.deliveredAt,
+        createdAt: deliveries.createdAt,
+      })
+      .from(deliveries)
+      .innerJoin(prescriptions, eq(prescriptions.id, deliveries.prescriptionId))
+      .innerJoin(consultations, eq(consultations.id, prescriptions.consultationId))
+      .where(eq(consultations.patientId, patientId))
+      .orderBy(desc(deliveries.createdAt))
+      .limit(5);
+
+    return {
+      nextConsultation: next
+        ? { id: next.id, scheduledAt: next.scheduledAt, mode: next.mode, doctorName: `Dr ${next.doctorFirstName} ${next.doctorLastName}` }
+        : null,
+      latestReadings: latestReadings.filter((r) => r !== null),
+      treatment: lastPrescription
+        ? { source: 'PRESCRIPTION' as const, items: lastPrescription.items, since: lastPrescription.createdAt }
+        : patient.currentTreatments
+          ? { source: 'DECLARED' as const, text: patient.currentTreatments }
+          : null,
+      deliveries: recentDeliveries,
+    };
+  }
+
+  async readings(userId: string, patientId: string, type: ReadingType, days = 90) {
+    await this.access.resolve(userId, patientId);
+    const rows = await this.db
+      .select()
+      .from(readings)
+      .where(
+        and(
+          eq(readings.patientId, patientId),
+          eq(readings.type, type),
+          gte(readings.measuredAt, new Date(Date.now() - days * DAY_MS)),
+        ),
+      )
+      .orderBy(asc(readings.measuredAt));
+    return rows.map(toReading);
+  }
+
+  async consultations(userId: string, patientId: string) {
+    await this.access.resolve(userId, patientId);
+    const rows = await this.db
+      .select({
+        id: consultations.id,
+        scheduledAt: consultations.scheduledAt,
+        mode: consultations.mode,
+        status: consultations.status,
+        summary: consultations.summary,
+        doctorFirstName: users.firstName,
+        doctorLastName: users.lastName,
+      })
+      .from(consultations)
+      .innerJoin(users, eq(users.id, consultations.doctorId))
+      .where(eq(consultations.patientId, patientId))
+      .orderBy(desc(consultations.scheduledAt));
+    return rows.map(({ doctorFirstName, doctorLastName, ...c }) => ({
+      ...c,
+      doctorName: `Dr ${doctorFirstName} ${doctorLastName}`,
+    }));
+  }
+
+  async reports(userId: string, patientId: string) {
+    await this.access.resolve(userId, patientId);
+    return this.db
+      .select({
+        id: monthlyReports.id,
+        month: monthlyReports.month,
+        content: monthlyReports.content,
+        sentAt: monthlyReports.sentAt,
+      })
+      .from(monthlyReports)
+      .where(eq(monthlyReports.patientId, patientId))
+      .orderBy(desc(monthlyReports.month));
+  }
+
+  async prescriptions(userId: string, patientId: string) {
+    await this.access.resolve(userId, patientId);
+    const rows = await this.db
+      .select({
+        id: prescriptions.id,
+        items: prescriptions.items,
+        status: prescriptions.status,
+        priceXaf: prescriptions.priceXaf,
+        createdAt: prescriptions.createdAt,
+        doctorFirstName: users.firstName,
+        doctorLastName: users.lastName,
+        deliveryStatus: deliveries.status,
+        deliveredAt: deliveries.deliveredAt,
+      })
+      .from(prescriptions)
+      .innerJoin(consultations, eq(consultations.id, prescriptions.consultationId))
+      .innerJoin(users, eq(users.id, consultations.doctorId))
+      .leftJoin(deliveries, eq(deliveries.prescriptionId, prescriptions.id))
+      .where(eq(consultations.patientId, patientId))
+      .orderBy(desc(prescriptions.createdAt));
+    return rows.map(({ doctorFirstName, doctorLastName, ...p }) => ({
+      ...p,
+      doctorName: `Dr ${doctorFirstName} ${doctorLastName}`,
+    }));
+  }
+}
+
+function toReading(r: typeof readings.$inferSelect) {
+  return {
+    id: r.id,
+    type: r.type,
+    systolic: r.systolic,
+    diastolic: r.diastolic,
+    value: r.value === null ? null : Number(r.value), // numeric arrive en texte depuis PostgreSQL
+    measuredAt: r.measuredAt,
+    source: r.source,
+  };
+}

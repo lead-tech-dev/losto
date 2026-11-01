@@ -17,9 +17,23 @@ docker-compose.yml   PostgreSQL 16 + Redis 7 pour le développement
 |---|---|
 | `apps/api/src/db/schema.ts` | Toutes les tables : comptes, profils partenaires, parents suivis, abonnements, consultations, ordonnances, livraisons, relevés, comptes rendus, journal des accès |
 | `apps/api/drizzle/` | Migrations SQL générées à partir du schéma |
-| `apps/api/src/auth/` | Inscription des familles, connexion (JWT), gardes de connexion et de rôle |
+| `apps/api/src/auth/` | Inscription des familles, connexion (JWT), mot de passe oublié, profil, gardes de connexion et de rôle |
 | `apps/api/src/users/` | Espace admin : création et vérification des comptes partenaires, activation / désactivation |
+| `apps/api/src/patients/` | Espace famille : parents suivis, formule, tableau de bord, relevés, historiques, partage avec les proches, consentement du parent |
+| `apps/api/src/coverage/` | Quartiers desservis à Douala et Yaoundé |
+| `apps/api/src/messages/` | Messagerie entre les familles et l'équipe |
+| `apps/api/src/mail/` | Envoi d'e-mails (SMTP, ou console en développement) |
 | `apps/api/src/audit/` | Journal de qui a fait quoi sur les données |
+
+### Qui voit quoi dans l'espace famille
+
+| | Titulaire (a inscrit le parent) | Proche invité | Autre famille |
+|---|---|---|---|
+| Suivi, relevés, consultations, ordonnances | Oui | Oui | Non (réponse « introuvable ») |
+| Modifier le dossier, changer la formule | Oui | Non | Non |
+| Inviter ou retirer un proche | Oui | Non (peut seulement partir) | Non |
+
+Une invitation n'est valable que pour l'adresse e-mail invitée, 7 jours, une seule fois. Le parent confirme lui-même son accord depuis un lien, sans compte.
 
 ### Rôles
 
@@ -43,7 +57,7 @@ npm install
 npm run db:up                         # lance PostgreSQL et Redis
 cp apps/api/.env.example apps/api/.env  # puis remplace JWT_SECRET et le mot de passe admin
 npm run db:migrate                    # crée les tables
-npm run db:seed                       # crée le premier compte admin
+npm run db:seed                       # crée le premier compte admin et une liste de départ de quartiers couverts
 
 npm run dev:api                       # API sur http://localhost:3000/api
 npm run dev:web                       # appli sur http://localhost:5173
@@ -68,7 +82,7 @@ DATABASE_URL="postgresql://losto:losto@localhost:5432/losto_test" npm test
 ## Feuille de route
 
 - [x] Module 1 : fondations (projet, schéma de données, comptes et rôles)
-- [ ] Module 2 : espace famille (inscription du parent, formule, tableau de bord)
+- [x] Module 2 : espace famille (inscription du parent, formule, tableau de bord, partage, messagerie)
 - [ ] Module 3 : paiements (carte via Stripe, Mobile Money)
 - [ ] Module 4 : portail médecin et infirmier (agenda, téléconsultation, compte rendu, ordonnance)
 - [ ] Module 5 : pharmacie et livraison

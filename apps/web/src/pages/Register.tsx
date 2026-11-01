@@ -1,10 +1,12 @@
 import { FormEvent, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  // Après une invitation, on revient sur la page de l'invitation une fois le compte créé
+  const from = (useLocation().state as { from?: string } | null)?.from;
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -22,7 +24,7 @@ export default function Register() {
     setBusy(true);
     try {
       await register({ ...form, phone: form.phone || undefined });
-      navigate('/');
+      navigate(from ?? '/parents/nouveau', { replace: true });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -62,7 +64,10 @@ export default function Register() {
           {busy ? 'Création…' : 'Créer mon compte'}
         </button>
         <p className="muted small">
-          Déjà inscrit(e) ? <Link to="/connexion">Se connecter</Link>
+          Déjà inscrit(e) ?{' '}
+          <Link to="/connexion" state={from ? { from } : undefined}>
+            Se connecter
+          </Link>
         </p>
       </form>
     </div>
