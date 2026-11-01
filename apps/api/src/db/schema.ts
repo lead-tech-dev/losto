@@ -284,6 +284,11 @@ export const payments = pgTable(
     failureReason: text('failure_reason'),
     invoiceNumber: text('invoice_number').unique(), // attribué au paiement réussi : PS-2026-000001
     paidAt: timestamp('paid_at', { withTimezone: true }),
+    // Remboursement décidé par l'équipe : automatique par carte (Stripe), noté à la main pour le Mobile Money
+    refundedAt: timestamp('refunded_at', { withTimezone: true }),
+    refundReason: text('refund_reason'),
+    refundRef: text('refund_ref'), // identifiant Stripe (re_…) ou référence du remboursement Mobile Money
+    refundedById: uuid('refunded_by_id').references(() => users.id),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -552,3 +557,24 @@ export const whatsappMessages = pgTable(
   (t) => [index('wa_phone_idx').on(t.phone, t.createdAt), index('wa_patient_idx').on(t.patientId, t.createdAt)],
 );
 export type WhatsappMessage = typeof whatsappMessages.$inferSelect;
+
+// ---------- Back-office ----------
+
+// Relevé mensuel versé à un partenaire (médecin, infirmier, livreur, pharmacie, laboratoire)
+export const partnerPayouts = pgTable(
+  'partner_payouts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partnerId: uuid('partner_id')
+      .notNull()
+      .references(() => users.id),
+    month: timestamp('month', { withTimezone: true }).notNull(), // 1er jour du mois (heure du Cameroun)
+    amountXaf: integer('amount_xaf').notNull(), // montant versé, figé au moment du paiement
+    items: integer('items').notNull(), // nombre d'actes payés
+    reference: text('reference'), // référence du virement ou du transfert Mobile Money
+    paidAt: timestamp('paid_at', { withTimezone: true }).notNull(),
+    paidById: uuid('paid_by_id').references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('partner_payouts_partner_month_uq').on(t.partnerId, t.month)],
+);

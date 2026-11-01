@@ -52,7 +52,8 @@ export default function LineChart({ series, unit, height = 220 }: Props) {
   const ticks = niceTicks(Math.min(...values), Math.max(...values));
   const vMin = ticks[0];
   const vMax = ticks[ticks.length - 1];
-  const decimals = vMax - vMin < 5 ? 2 : 0;
+  // Décimales seulement si une graduation n'est pas entière (glycémie 1,20 ; pas « 4,00 parents »)
+  const decimals = ticks.every((t) => Number.isInteger(t)) ? 0 : vMax - vMin < 5 ? 2 : 0;
 
   const x = (t: number) => PAD.left + (tMax === tMin ? 0.5 : (t - tMin) / (tMax - tMin)) * (W - PAD.left - PAD.right);
   const y = (v: number) => PAD.top + (1 - (v - vMin) / (vMax - vMin || 1)) * (height - PAD.top - PAD.bottom);

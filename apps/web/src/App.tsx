@@ -6,6 +6,13 @@ import AcceptInvitation from './pages/AcceptInvitation';
 import AdminMessages from './pages/AdminMessages';
 import AdminReports from './pages/AdminReports';
 import AdminWhatsApp from './pages/AdminWhatsApp';
+import AdminAudit from './pages/admin/AdminAudit';
+import AdminMetrics from './pages/admin/AdminMetrics';
+import AdminPatients from './pages/admin/AdminPatients';
+import AdminPayments from './pages/admin/AdminPayments';
+import AdminPayouts from './pages/admin/AdminPayouts';
+import AdminZones from './pages/admin/AdminZones';
+import MyStatement from './pages/partners/MyStatement';
 import AdminUsers from './pages/AdminUsers';
 import AvailabilityPage from './pages/care/AvailabilityPage';
 import DoctorPatientFile from './pages/care/DoctorPatientFile';
@@ -66,6 +73,13 @@ export default function App() {
       <Route path="/admin/comptes" element={<Protected role="ADMIN"><AdminUsers /></Protected>} />
       <Route path="/admin/messages" element={<Protected role="ADMIN"><AdminMessages /></Protected>} />
       <Route path="/admin/whatsapp" element={<Protected role="ADMIN"><AdminWhatsApp /></Protected>} />
+      <Route path="/admin/parents" element={<Protected role="ADMIN"><AdminPatients /></Protected>} />
+      <Route path="/admin/paiements" element={<Protected role="ADMIN"><AdminPayments /></Protected>} />
+      <Route path="/admin/partenaires" element={<Protected role="ADMIN"><AdminPayouts /></Protected>} />
+      <Route path="/admin/indicateurs" element={<Protected role="ADMIN"><AdminMetrics /></Protected>} />
+      <Route path="/admin/journal" element={<Protected role="ADMIN"><AdminAudit /></Protected>} />
+      <Route path="/admin/zones" element={<Protected role="ADMIN"><AdminZones /></Protected>} />
+      <Route path="/releves" element={<Protected roles={['DOCTOR', 'NURSE', 'PHARMACY', 'LAB', 'COURIER']}><MyStatement /></Protected>} />
       <Route path="/admin/comptes-rendus" element={<Protected role="ADMIN"><AdminReports /></Protected>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

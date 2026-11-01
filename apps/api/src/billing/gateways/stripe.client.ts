@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
@@ -40,6 +40,8 @@ export abstract class StripeGateway {
   abstract setCancelAtPeriodEnd(subscriptionId: string, cancel: boolean): Promise<void>;
   abstract billingPortalUrl(customerId: string, returnUrl: string): Promise<string>;
   abstract verifyWebhook(rawBody: Buffer, signature: string): StripeEvent;
+  // Rembourse intégralement le paiement (session Checkout « cs_… » ou facture « in_… ») ; renvoie l'identifiant du remboursement
+  abstract refund(providerRef: string): Promise<string>;
 }
 
 @Injectable()
@@ -63,6 +65,24 @@ export class StripeClient extends StripeGateway {
 
   private ensureConfigured() {
     if (!this.hasKey) throw new ServiceUnavailableException('Le paiement par carte n’est pas encore configuré');
+  }
+
+  async refund(providerRef: string): Promise<string> {
+    this.ensureConfigured();
+    let paymentIntent: string | undefined;
+    if (providerRef.startsWith('cs_')) {
+      const session = await this.stripe.checkout.sessions.retrieve(providerRef);
+      paymentIntent = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
+      // Abonnement : le premier paiement passe par la facture de la session
+      if (!paymentIntent && session.invoice) return this.refund(typeof session.invoice === 'string' ? session.invoice : session.invoice.id!);
+    } else if (providerRef.startsWith('in_')) {
+      const list = await this.stripe.invoicePayments.list({ invoice: providerRef, limit: 1 });
+      const pi = list.data[0]?.payment?.payment_intent;
+      paymentIntent = typeof pi === 'string' ? pi : pi?.id;
+    }
+    if (!paymentIntent) throw new BadRequestException('Paiement introuvable chez Stripe : remboursez depuis le tableau de bord Stripe');
+    const refund = await this.stripe.refunds.create({ payment_intent: paymentIntent, reason: 'requested_by_customer' });
+    return refund.id;
   }
 
   async ensureCustomer(existingId: string | null, email: string, name: string): Promise<string> {

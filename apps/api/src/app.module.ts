@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuditModule } from './audit/audit.module';
+import { BackofficeModule } from './backoffice/backoffice.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -39,6 +40,7 @@ import { WhatsAppModule } from './whatsapp/whatsapp.module';
     CareModule,
     LogisticsModule,
     WhatsAppModule,
+    BackofficeModule,
   ],
   controllers: [HealthController],
   providers: [

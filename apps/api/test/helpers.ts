@@ -104,6 +104,11 @@ export class FakeStripe extends StripeGateway {
   oneTimeCheckouts: OneTimeCheckoutInput[] = [];
   planChanges: { subscriptionId: string; monthlyCents: number }[] = [];
   cancelFlags: { subscriptionId: string; cancel: boolean }[] = [];
+  refunds: string[] = [];
+  async refund(providerRef: string): Promise<string> {
+    this.refunds.push(providerRef);
+    return `re_test_${this.refunds.length}`;
+  }
   private real = new StripeClient(new ConfigService({ STRIPE_WEBHOOK_SECRET }));
   get configured() {
     return true;

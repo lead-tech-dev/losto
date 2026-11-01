@@ -32,6 +32,6 @@ import { StripeEventsService } from './stripe-events.service';
       },
     },
   ],
-  exports: [BillingService],
+  exports: [BillingService, StripeGateway],
 })
 export class BillingModule {}

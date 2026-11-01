@@ -3,6 +3,7 @@ import { useAuth } from '../auth';
 import Layout from '../components/Layout';
 import DoctorHome from './care/DoctorHome';
 import NurseHome from './care/NurseHome';
+import AdminHome from './admin/AdminHome';
 import FamilyHome from './family/FamilyHome';
 import CourierHome from './partners/CourierHome';
 import LabHome from './partners/LabHome';
@@ -51,6 +52,7 @@ export default function Dashboard() {
   if (user.role === 'PHARMACY') return <PharmacyHome />;
   if (user.role === 'LAB') return <LabHome />;
   if (user.role === 'COURIER') return <CourierHome firstName={user.firstName} />;
+  if (user.role === 'ADMIN') return <AdminHome firstName={user.firstName} />;
   const space = SPACES[user.role];
 
   return (

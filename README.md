@@ -150,6 +150,22 @@ Deux parents sur le même numéro : le message commence par le prénom (« Paul 
 
 **Données personnelles** : les messages des parents sont des données de santé. L'assistant (facultatif) envoie le texte des questions non médicales à l'API d'Anthropic : à couvrir dans la politique de confidentialité (module 8).
 
+## Back-office (équipe Proche Santé)
+
+Sous-menu réservé au rôle `ADMIN` :
+
+| Écran | Contenu |
+|---|---|
+| Tableau de bord | Parents suivis, revenu mensuel récurrent, impayés, consultations, alertes urgentes, WhatsApp à traiter, et la liste **À traiter** : consultation ou visite non clôturée, ordonnance non chiffrée ou commande pas prête, livraison sans livreur ou en échec, prise de sang ou résultats en attente, alerte urgente non traitée, abonné sans médecin, message WhatsApp sans réponse |
+| Parents | Recherche, filtres ville et abonnement, famille, formule, équipe ; changement d'équipe parmi les partenaires vérifiés de la ville (avec leur charge) |
+| Paiements | Tous les paiements, impayés, remboursements : automatique par carte (Stripe), noté avec sa référence pour le Mobile Money (remboursé depuis le portail Tranzak) |
+| Partenaires | Relevé mensuel de chaque partenaire, détail des actes, versement marqué avec sa référence (le partenaire est prévenu). Chaque partenaire voit le sien dans « Mes relevés » |
+| Indicateurs | Inscriptions, conversion, parents suivis, revenu, coûts partenaires et WhatsApp, marge (totale et par parent), fidélité à 1, 3 et 6 mois |
+| Journal | Toutes les lectures de dossiers et actions sensibles, filtrables |
+| Zones | Quartiers desservis à Douala et Yaoundé |
+
+**Tarifs partenaires** (`apps/api/src/backoffice/rates.ts`, valeurs de départ **à négocier**, modifiables par variables d'environnement) : bilan de départ 8 000 FCFA, consultation 5 000, visite à domicile 5 000, livraison 1 500 (passage manqué 500), prise de sang à domicile 2 000. Les pharmacies reçoivent le prix des médicaments payé par les familles. Coût estimé d'un message WhatsApp : 15 FCFA (`WHATSAPP_COST_XAF`).
+
 ## Modifier le schéma
 
 1. Modifie `apps/api/src/db/schema.ts`.
@@ -172,5 +188,5 @@ DATABASE_URL="postgresql://losto:losto@localhost:5432/losto_test" npm test
 - [x] Module 4 : portail médecin et infirmier (agenda, téléconsultation, compte rendu, ordonnance, visites, alertes)
 - [x] Module 5 : pharmacie, laboratoire et livraison (prix, paiement, préparation, livraison contre code, prises de sang, résultats relus par le médecin)
 - [x] Module 6 : WhatsApp (relevés par message, urgences, rappels, code de livraison, comptes rendus mensuels, assistant)
-- [ ] Module 7 : back-office et indicateurs
+- [x] Module 7 : back-office et indicateurs (tableau de bord, retards, parents et équipes, paiements et remboursements, relevés partenaires, indicateurs, journal, zones)
 - [ ] Module 8 : mise en production
