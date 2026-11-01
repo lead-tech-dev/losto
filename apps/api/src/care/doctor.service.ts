@@ -16,7 +16,7 @@ import {
   subscriptions,
   users,
 } from '../db/schema';
-import { MailerService } from '../mail/mailer.service';
+import { NotifyService } from '../mail/notify.service';
 import { fmtLocal } from './care-time';
 import { CareTeamService } from './care-team.service';
 import { ClinicalAccessService } from './clinical-access.service';
@@ -36,7 +36,7 @@ export class DoctorService {
     private readonly access: ClinicalAccessService,
     private readonly scheduling: SchedulingService,
     private readonly readingsSvc: ReadingsService,
-    private readonly mailer: MailerService,
+    private readonly notify: NotifyService,
     private readonly audit: AuditService,
     private readonly team: CareTeamService,
   ) {}
@@ -271,12 +271,9 @@ export class DoctorService {
   }
 
   private async notifyFamily(patient: Patient, subject: string, text: string) {
-    const [owner] = await this.db.select().from(users).where(eq(users.id, patient.familyUserId));
-    if (!owner) return;
-    await this.mailer
-      .send({ to: owner.email, subject, text: `Bonjour ${owner.firstName},\n\n${text}\n\nL’équipe Proche Santé` })
-      .catch((e) => this.logger.error(`E-mail famille : ${e.message}`));
+    await this.notify.family(patient.id, subject, text);
   }
+
 }
 
 export function consultationView(c: typeof consultations.$inferSelect) {

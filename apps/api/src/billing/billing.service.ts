@@ -26,7 +26,7 @@ import {
   subscriptions,
   users,
 } from '../db/schema';
-import { MailerService } from '../mail/mailer.service';
+import { NotifyService } from '../mail/notify.service';
 import { PatientAccessService } from '../patients/patient-access.service';
 import { eurToXaf, PLAN_LABELS, PLAN_PRICES_EUR, SIGNUP_FEE_EUR, xafToEurCents } from '../patients/plans';
 import { addOneMonth, DAY_MS, fmtAmount, fmtDay, mchRef, toTranzakNumber } from './billing.util';
@@ -55,7 +55,7 @@ export class BillingService {
     private readonly coverage: CoverageService,
     private readonly stripe: StripeGateway,
     private readonly tranzak: TranzakGateway,
-    private readonly mailer: MailerService,
+    private readonly notifier: NotifyService,
     private readonly audit: AuditService,
     private readonly scheduling: SchedulingService,
   ) {}
@@ -598,9 +598,9 @@ export class BillingService {
 
   // ================= E-mails =================
 
-  async notify(userId: string, subject: string, text: string) {
-    const u = await this.user(userId);
-    await this.mailer.send({ to: u.email, subject, text: `Bonjour ${u.firstName},\n\n${text}\n\nL’équipe Proche Santé` });
+  // E-mail (et WhatsApp pour la famille) au payeur
+  async notify(userId: string, subject: string, text: string, patientId?: string) {
+    await this.notifier.user(userId, subject, text, { patientId });
   }
 
   private async mailReceipt(p: Payment) {

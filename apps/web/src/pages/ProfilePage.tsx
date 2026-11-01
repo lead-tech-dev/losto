@@ -9,6 +9,7 @@ export default function ProfilePage() {
     firstName: user?.firstName ?? '',
     lastName: user?.lastName ?? '',
     phone: user?.phone ?? '',
+    whatsappNotifications: user?.whatsappNotifications ?? true,
   });
   const [pw, setPw] = useState({ currentPassword: '', newPassword: '' });
   const [msg, setMsg] = useState<{ profile?: string; pw?: string; error?: string; pwError?: string }>({});
@@ -65,6 +66,16 @@ export default function ProfilePage() {
             <input type="tel" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} placeholder="+33 6 …" />
           </label>
         </div>
+        {user.role === 'FAMILY' && (
+          <label className={`check ${profile.whatsappNotifications ? 'on' : ''}`}>
+            <input
+              type="checkbox"
+              checked={profile.whatsappNotifications}
+              onChange={(e) => setProfile({ ...profile, whatsappNotifications: e.target.checked })}
+            />
+            Recevoir aussi les nouvelles de mes parents sur WhatsApp (en plus des e-mails)
+          </label>
+        )}
         {msg.error && <p className="error">{msg.error}</p>}
         {msg.profile && <p className="success">{msg.profile}</p>}
         <div>

@@ -72,6 +72,9 @@ export const labAppointmentModeEnum = pgEnum('lab_appointment_mode', LAB_APPOINT
 export const REFERRAL_URGENCIES = ['ROUTINE', 'URGENT', 'EMERGENCY'] as const;
 export const referralUrgencyEnum = pgEnum('referral_urgency', REFERRAL_URGENCIES);
 export const alertSeverityEnum = pgEnum('alert_severity', ['WARNING', 'URGENT']);
+export const waDirectionEnum = pgEnum('wa_direction', ['IN', 'OUT']);
+export const WA_STATUSES = ['RECEIVED', 'SENT', 'DELIVERED', 'READ', 'FAILED', 'SKIPPED'] as const;
+export const waStatusEnum = pgEnum('wa_status', WA_STATUSES);
 
 // Colonnes de dates réutilisées partout
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
@@ -91,6 +94,8 @@ export const users = pgTable('users', {
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull(),
   phone: text('phone'),
+  // Famille : reçoit aussi les notifications sur WhatsApp (en plus de l'e-mail)
+  whatsappNotifications: boolean('whatsapp_notifications').notNull().default(true),
   isActive: boolean('is_active').notNull().default(true),
   stripeCustomerId: text('stripe_customer_id').unique(),
   createdAt: createdAt(),
@@ -140,6 +145,8 @@ export const patients = pgTable(
     // Consentement : le parent confirme lui-même (lien envoyé par WhatsApp) qu'il accepte d'être suivi
     consentToken: text('consent_token').notNull().unique(),
     consentGivenAt: timestamp('consent_given_at', { withTimezone: true }),
+    // Le parent a répondu STOP : plus aucun message automatique (il peut répondre REPRENDRE)
+    whatsappOptOutAt: timestamp('whatsapp_opt_out_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -486,6 +493,8 @@ export const monthlyReports = pgTable(
       .references(() => patients.id, { onDelete: 'cascade' }),
     month: timestamp('month', { withTimezone: true }).notNull(), // 1er jour du mois concerné
     content: text('content').notNull(),
+    // Brouillon généré automatiquement, relu (et corrigé) par l'équipe avant l'envoi à la famille
+    reviewedById: uuid('reviewed_by_id').references(() => users.id),
     sentAt: timestamp('sent_at', { withTimezone: true }),
     createdAt: createdAt(),
   },
@@ -514,3 +523,32 @@ export type Payment = typeof payments.$inferSelect;
 export type Consultation = typeof consultations.$inferSelect;
 export type HomeVisit = typeof homeVisits.$inferSelect;
 export type Reading = typeof readings.$inferSelect;
+
+// ---------- WhatsApp ----------
+
+// Tous les messages WhatsApp, reçus et envoyés : historique, fenêtre de 24 h, anti-doublon, coût
+export const whatsappMessages = pgTable(
+  'whatsapp_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    phone: text('phone').notNull(), // chiffres seulement, indicatif compris : 237677123456
+    patientId: uuid('patient_id').references(() => patients.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }), // destinataire famille
+    direction: waDirectionEnum('direction').notNull(),
+    // welcome, med_reminder, appt_reminder, reading_ack, emergency, assistant, handoff, staff_reply, family_notice, delivery_code…
+    kind: text('kind').notNull(),
+    template: text('template'), // modèle Meta utilisé (fenêtre de 24 h fermée)
+    body: text('body').notNull(),
+    waId: text('wa_id').unique(), // identifiant du message chez Meta
+    status: waStatusEnum('status').notNull(),
+    error: text('error'),
+    dedupeKey: text('dedupe_key').unique(), // un rappel donné n'est envoyé qu'une fois
+    needsHuman: boolean('needs_human').notNull().default(false), // message à traiter par l'équipe
+    handledAt: timestamp('handled_at', { withTimezone: true }),
+    handledById: uuid('handled_by_id').references(() => users.id),
+    acknowledgedAt: timestamp('acknowledged_at', { withTimezone: true }), // rappel de médicaments confirmé par « OK »
+    createdAt: createdAt(),
+  },
+  (t) => [index('wa_phone_idx').on(t.phone, t.createdAt), index('wa_patient_idx').on(t.patientId, t.createdAt)],
+);
+export type WhatsappMessage = typeof whatsappMessages.$inferSelect;

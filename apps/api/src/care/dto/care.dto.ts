@@ -10,6 +10,7 @@ import {
   IsOptional,
   IsString,
   Max,
+  Matches,
   MaxLength,
   Min,
   MinLength,
@@ -43,6 +44,8 @@ export class PrescriptionItemDto {
   @IsOptional() @IsString() @MaxLength(200) dosage?: string;
   @IsOptional() @IsInt() @Min(1) @Max(1000) quantity?: number;
   @IsOptional() @IsInt() @Min(1) @Max(365) durationDays?: number;
+  // Heures de prise (heure du Cameroun) pour les rappels WhatsApp, ex. ["08:00", "20:00"]
+  @IsOptional() @IsArray() @ArrayMaxSize(6) @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { each: true, message: 'Heure attendue au format HH:MM' }) times?: string[];
 }
 
 export class ReferralDto {

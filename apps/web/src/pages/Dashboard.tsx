@@ -68,6 +68,12 @@ export default function Dashboard() {
             <Link className="btn btn-ghost" to="/admin/messages">
               Messages des familles
             </Link>
+            <Link className="btn btn-ghost" to="/admin/whatsapp">
+              WhatsApp des parents
+            </Link>
+            <Link className="btn btn-ghost" to="/admin/comptes-rendus">
+              Comptes rendus à relire
+            </Link>
           </div>
         )}
       </section>

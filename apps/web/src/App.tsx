@@ -4,6 +4,8 @@ import { Role } from './api';
 import { useAuth } from './auth';
 import AcceptInvitation from './pages/AcceptInvitation';
 import AdminMessages from './pages/AdminMessages';
+import AdminReports from './pages/AdminReports';
+import AdminWhatsApp from './pages/AdminWhatsApp';
 import AdminUsers from './pages/AdminUsers';
 import AvailabilityPage from './pages/care/AvailabilityPage';
 import DoctorPatientFile from './pages/care/DoctorPatientFile';
@@ -63,6 +65,8 @@ export default function App() {
       {/* Admin */}
       <Route path="/admin/comptes" element={<Protected role="ADMIN"><AdminUsers /></Protected>} />
       <Route path="/admin/messages" element={<Protected role="ADMIN"><AdminMessages /></Protected>} />
+      <Route path="/admin/whatsapp" element={<Protected role="ADMIN"><AdminWhatsApp /></Protected>} />
+      <Route path="/admin/comptes-rendus" element={<Protected role="ADMIN"><AdminReports /></Protected>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

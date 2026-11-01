@@ -17,11 +17,58 @@ import { MobileChargeInput, TranzakGateway, TranzakRequest, TranzakStatus } from
 import { Database, DB } from '../src/db/db.module';
 import { runMigrations } from '../src/db/migrate';
 import { Role, users } from '../src/db/schema';
+import { AssistantLlm, AssistantReply } from '../src/whatsapp/assistant';
+import { SentMessage, WhatsAppGateway } from '../src/whatsapp/gateway';
 
 export const STRIPE_WEBHOOK_SECRET = 'whsec_test_secret';
 export const TRANZAK_AUTH_KEY = 'cle-notification-tranzak';
 
 // Faux Tranzak : garde les demandes en mémoire ; le test décide quand le payeur valide ou refuse.
+export const WHATSAPP_APP_SECRET = 'secret-application-meta';
+export const WHATSAPP_VERIFY_TOKEN = 'jeton-verification-meta';
+
+// WhatsApp : garde chaque envoi pour vérification
+export class FakeWhatsApp extends WhatsAppGateway {
+  readonly configured = true;
+  sent: { to: string; text?: string; template?: string; params?: string[] }[] = [];
+  failNext = false;
+  private n = 0;
+  private next(): SentMessage {
+    if (this.failNext) {
+      this.failNext = false;
+      throw new Error('Meta 500');
+    }
+    return { id: `wamid.test.${++this.n}` };
+  }
+  async sendText(to: string, text: string) {
+    const r = this.next();
+    this.sent.push({ to, text });
+    return r;
+  }
+  async sendTemplate(to: string, template: string, params: string[]) {
+    const r = this.next();
+    this.sent.push({ to, template, params });
+    return r;
+  }
+  to(phone: string) {
+    return this.sent.filter((m) => m.to === phone);
+  }
+  last(phone: string) {
+    return this.to(phone).at(-1);
+  }
+}
+
+// Assistant : réponse imposée par le test
+export class FakeAssistant extends AssistantLlm {
+  enabled = false;
+  next: AssistantReply = { medical: false, answer: null };
+  questions: string[] = [];
+  async reply(question: string): Promise<AssistantReply> {
+    this.questions.push(question);
+    return this.next;
+  }
+}
+
 export class FakeTranzak extends TranzakGateway {
   charges: MobileChargeInput[] = [];
   requests = new Map<string, TranzakRequest>();
@@ -92,19 +139,30 @@ export async function createTestApp(): Promise<{
   db: Database;
   stripe: FakeStripe;
   tranzak: FakeTranzak;
+  whatsapp: FakeWhatsApp;
+  assistant: FakeAssistant;
 }> {
   const url = testDatabaseUrl();
   process.env.JWT_SECRET ??= 'secret-de-test-suffisamment-long';
   process.env.TRANZAK_WEBHOOK_AUTH_KEY = TRANZAK_AUTH_KEY;
   await runMigrations(url);
 
+  process.env.WHATSAPP_APP_SECRET = WHATSAPP_APP_SECRET;
+  process.env.WHATSAPP_VERIFY_TOKEN = WHATSAPP_VERIFY_TOKEN;
+  process.env.WHATSAPP_SIMULATION = 'false'; // indépendant du .env de développement
   const stripe = new FakeStripe();
   const tranzak = new FakeTranzak();
+  const whatsapp = new FakeWhatsApp();
+  const assistant = new FakeAssistant();
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(StripeGateway)
     .useValue(stripe)
     .overrideProvider(TranzakGateway)
     .useValue(tranzak)
+    .overrideProvider(WhatsAppGateway)
+    .useValue(whatsapp)
+    .overrideProvider(AssistantLlm)
+    .useValue(assistant)
     .compile();
   const app = moduleRef.createNestApplication({ rawBody: true });
   configureApp(app);
@@ -112,7 +170,7 @@ export async function createTestApp(): Promise<{
   const db = app.get<Database>(DB);
   await db.execute(sql`TRUNCATE users, coverage_zones RESTART IDENTITY CASCADE`);
   await db.execute(sql`ALTER SEQUENCE invoice_number_seq RESTART WITH 1`);
-  return { app, db, stripe, tranzak };
+  return { app, db, stripe, tranzak, whatsapp, assistant };
 }
 
 // Crée un compte directement en base et renvoie son jeton de connexion.

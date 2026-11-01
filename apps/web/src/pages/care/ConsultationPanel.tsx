@@ -10,6 +10,29 @@ interface Line {
   name: string;
   dosage: string;
   quantity: string;
+  times: string[];
+  timesTouched?: boolean; // le médecin a choisi lui-même : on ne devine plus
+}
+
+// Heures des rappels WhatsApp (heure du Cameroun)
+const SLOTS = [
+  { time: '08:00', label: 'Matin' },
+  { time: '13:00', label: 'Midi' },
+  { time: '20:00', label: 'Soir' },
+  { time: '21:00', label: 'Coucher' },
+];
+
+// Même règle que le serveur : « 1 matin et soir » → matin + soir
+function guessTimes(dosage: string): string[] {
+  const t = dosage.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const out: string[] = [];
+  if (/\bmatin\b/.test(t)) out.push('08:00');
+  if (/\bmidi\b|\bdejeuner\b/.test(t)) out.push('13:00');
+  if (/\bsoir\b|\bdiner\b/.test(t)) out.push('20:00');
+  if (/\bcoucher\b|\bnuit\b/.test(t)) out.push('21:00');
+  if (out.length) return out;
+  const n = Number(t.match(/(\d)\s*(?:fois|x|prises?)/)?.[1] ?? 0) || (/par jour/.test(t) ? 1 : 0);
+  return n === 1 ? ['08:00'] : n === 2 ? ['08:00', '20:00'] : n >= 3 ? ['08:00', '13:00', '20:00'] : [];
 }
 
 // Poste de consultation : lancer l'appel, écrire le compte rendu, prescrire, demander des analyses, orienter.
@@ -45,7 +68,7 @@ export default function ConsultationPanel({
     if (glucose) readings.push({ type: 'GLUCOSE', value: Number(glucose.replace(',', '.')) });
     const prescription = lines
       .filter((l) => l.name.trim())
-      .map((l) => ({ name: l.name.trim(), dosage: l.dosage.trim() || undefined, quantity: l.quantity ? Number(l.quantity) : undefined }));
+      .map((l) => ({ name: l.name.trim(), dosage: l.dosage.trim() || undefined, quantity: l.quantity ? Number(l.quantity) : undefined, times: l.times.length ? l.times : undefined }));
     const tests = [...labs, ...otherLab.split(',').map((t) => t.trim()).filter(Boolean)];
     if (referral && (referral.destination.trim().length < 2 || referral.reason.trim().length < 2)) {
       return setError('Complétez la destination et le motif de l’orientation');
@@ -129,7 +152,13 @@ export default function ConsultationPanel({
                 </label>
                 <label>
                   Posologie
-                  <input value={l.dosage} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, dosage: e.target.value } : x)))} placeholder="1 matin et soir" />
+                  <input
+                    value={l.dosage}
+                    onChange={(e) =>
+                      setLines(lines.map((x, j) => (j === i ? { ...x, dosage: e.target.value, times: x.timesTouched ? x.times : guessTimes(e.target.value) } : x)))
+                    }
+                    placeholder="1 matin et soir"
+                  />
                 </label>
                 <label className="narrow">
                   Quantité
@@ -138,10 +167,34 @@ export default function ConsultationPanel({
                 <button type="button" className="btn btn-ghost btn-small" onClick={() => setLines(lines.filter((_, j) => j !== i))}>
                   Retirer
                 </button>
+                <div className="slot-chips" role="group" aria-label={`Rappels WhatsApp pour ${l.name || 'ce médicament'}`}>
+                  <span className="muted small">Rappel WhatsApp :</span>
+                  {SLOTS.map((s) => {
+                    const on = l.times.includes(s.time);
+                    return (
+                      <button
+                        key={s.time}
+                        type="button"
+                        aria-pressed={on}
+                        className={`chip ${on ? 'on' : ''}`}
+                        onClick={() =>
+                          setLines(
+                            lines.map((x, j) =>
+                              j === i ? { ...x, timesTouched: true, times: on ? x.times.filter((t) => t !== s.time) : [...x.times, s.time].sort() } : x,
+                            ),
+                          )
+                        }
+                      >
+                        {s.label} <span className="muted">{s.time.replace(':00', ' h')}</span>
+                      </button>
+                    );
+                  })}
+                  {!l.times.length && <span className="muted small">aucun</span>}
+                </div>
               </div>
             ))}
             <div>
-              <button type="button" className="btn btn-ghost btn-small" onClick={() => setLines([...lines, { name: '', dosage: '', quantity: '' }])}>
+              <button type="button" className="btn btn-ghost btn-small" onClick={() => setLines([...lines, { name: '', dosage: '', quantity: '', times: [] }])}>
                 + Médicament
               </button>
               {file.prescriptions[0] && lines.length === 0 && (
@@ -149,7 +202,7 @@ export default function ConsultationPanel({
                   type="button"
                   className="btn btn-ghost btn-small"
                   onClick={() =>
-                    setLines(file.prescriptions[0].items.map((it) => ({ name: it.name, dosage: it.dosage ?? '', quantity: it.quantity ? String(it.quantity) : '' })))
+                    setLines(file.prescriptions[0].items.map((it) => ({ name: it.name, dosage: it.dosage ?? '', quantity: it.quantity ? String(it.quantity) : '', times: it.times ?? guessTimes(it.dosage ?? ''), timesTouched: Boolean(it.times) })))
                   }
                 >
                   Renouveler la dernière ordonnance

@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class ForgotPasswordDto {
   @IsEmail({}, { message: 'Adresse e-mail invalide' })
@@ -44,4 +44,8 @@ export class UpdateProfileDto {
   @IsOptional()
   @Matches(/^(\+?[0-9 ]{8,20})?$/, { message: 'Numéro de téléphone invalide' })
   phone?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  whatsappNotifications?: boolean;
 }

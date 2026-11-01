@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { api } from '../../api';
 import Layout from '../../components/Layout';
 import { CITY_LABELS, CONDITION_LABELS, PLAN_LABELS, SUBSCRIPTION_STATUS } from '../../labels';
 import { PatientDetail } from '../../types';
@@ -97,13 +98,28 @@ export default function ParentPage() {
         <div className="notice notice-warn">
           <strong>{p.firstName} doit confirmer son accord.</strong>{' '}
           {isOwner && p.consentUrl ? (
-            <>
-              Envoyez-lui ce lien sur WhatsApp, il lui suffit de l'ouvrir et de cliquer sur « J'accepte » :
-              <CopyLink url={p.consentUrl} />
-            </>
+            p.hasSmartphone ? (
+              <>
+                Nous lui avons écrit sur WhatsApp au {p.whatsappPhone} : il lui suffit de répondre <strong>OUI</strong>.{' '}
+                <ResendWelcome patientId={p.id} />
+                <br />
+                <span className="small">Vous pouvez aussi lui transmettre ce lien :</span>
+                <CopyLink url={p.consentUrl} />
+              </>
+            ) : (
+              <>
+                Transmettez-lui ce lien (ou ouvrez-le avec lui), il lui suffit de cliquer sur « J'accepte » :
+                <CopyLink url={p.consentUrl} />
+              </>
+            )
           ) : (
             'Le titulaire du compte lui a envoyé le lien de confirmation.'
           )}
+        </div>
+      )}
+      {p.whatsappOptOut && (
+        <div className="notice notice-warn">
+          {p.firstName} a répondu STOP : plus de rappels WhatsApp. Le médecin continue d'appeler aux rendez-vous. Pour reprendre, {p.firstName} répond REPRENDRE.
         </div>
       )}
       {isOwner && needsPayment && p.consentGiven && p.covered && cardReturn !== 'carte' && (
@@ -159,5 +175,26 @@ function CopyLink({ url }: { url: string }) {
         {copied ? 'Copié' : 'Copier le lien'}
       </button>
     </span>
+  );
+}
+
+function ResendWelcome({ patientId }: { patientId: string }) {
+  const [state, setState] = useState<'idle' | 'sent' | string>('idle');
+  if (state === 'sent') return <span className="small">Message renvoyé.</span>;
+  return (
+    <>
+      <button
+        type="button"
+        className="link-btn small"
+        onClick={() =>
+          api(`/patients/${patientId}/whatsapp/welcome`, { method: 'POST' })
+            .then(() => setState('sent'))
+            .catch((e) => setState((e as Error).message))
+        }
+      >
+        Renvoyer le message
+      </button>
+      {state !== 'idle' && <span className="error small"> {state}</span>}
+    </>
   );
 }

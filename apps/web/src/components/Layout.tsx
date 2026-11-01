@@ -61,6 +61,8 @@ export default function Layout({ children }: { children: ReactNode }) {
               <>
                 <NavLink to="/admin/comptes">Comptes</NavLink>
                 <NavLink to="/admin/messages">Messages</NavLink>
+                <NavLink to="/admin/whatsapp">WhatsApp</NavLink>
+                <NavLink to="/admin/comptes-rendus">Comptes rendus</NavLink>
               </>
             )}
             <NavLink to="/profil">

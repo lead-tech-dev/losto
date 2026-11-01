@@ -13,8 +13,8 @@ export interface RecordedAlert {
   message: string;
 }
 
-// Enregistre des relevés mesurés par un soignant et crée les alertes pour le médecin du parent.
-// (Le module 6 utilisera le même contrôle pour les relevés envoyés par WhatsApp.)
+// Enregistre des relevés (mesurés par un soignant ou envoyés par le parent sur WhatsApp)
+// et crée les alertes pour le médecin du parent.
 @Injectable()
 export class ReadingsService {
   private readonly logger = new Logger(ReadingsService.name);
@@ -35,7 +35,7 @@ export class ReadingsService {
     tx: Tx,
     patient: Patient,
     list: ReadingInput[],
-    ctx: { source: 'NURSE' | 'DOCTOR'; recordedById: string; homeVisitId?: string; consultationId?: string },
+    ctx: { source: 'NURSE' | 'DOCTOR' | 'WHATSAPP'; recordedById?: string; homeVisitId?: string; consultationId?: string; measuredAt?: Date },
   ): Promise<RecordedAlert[]> {
     const created: RecordedAlert[] = [];
     for (const r of list) {
@@ -47,9 +47,9 @@ export class ReadingsService {
           systolic: r.type === 'BLOOD_PRESSURE' ? r.systolic : null,
           diastolic: r.type === 'BLOOD_PRESSURE' ? r.diastolic : null,
           value: r.type === 'BLOOD_PRESSURE' ? null : String(r.value),
-          measuredAt: new Date(),
+          measuredAt: ctx.measuredAt ?? new Date(),
           source: ctx.source,
-          recordedById: ctx.recordedById,
+          recordedById: ctx.recordedById ?? null,
           homeVisitId: ctx.homeVisitId,
           consultationId: ctx.consultationId,
         })
@@ -64,7 +64,7 @@ export class ReadingsService {
           message: verdict.message,
           // Mesuré par le médecin lui-même : il l'a sous les yeux, l'alerte est déjà vue
           acknowledgedAt: ctx.source === 'DOCTOR' ? new Date() : null,
-          acknowledgedById: ctx.source === 'DOCTOR' ? ctx.recordedById : null,
+          acknowledgedById: ctx.source === 'DOCTOR' ? (ctx.recordedById ?? null) : null,
         });
         created.push(verdict);
       }
@@ -72,7 +72,7 @@ export class ReadingsService {
     return created;
   }
 
-  // Alerte urgente mesurée par l'infirmier : le médecin est aussi prévenu par e-mail
+  // Alerte urgente (infirmier ou WhatsApp) : le médecin est aussi prévenu par e-mail
   async emailDoctor(patient: Patient, list: RecordedAlert[]) {
     const urgent = list.filter((a) => a.severity === 'URGENT');
     if (!urgent.length || !patient.doctorId) return;
@@ -83,7 +83,7 @@ export class ReadingsService {
         to: doc.email,
         subject: `URGENT · ${patient.firstName} ${patient.lastName} : ${urgent[0].message}`,
         text:
-          `Docteur ${doc.lastName},\n\nRelevé mesuré à domicile pour ${patient.firstName} ${patient.lastName} ` +
+          `Docteur ${doc.lastName},\n\nRelevé à domicile pour ${patient.firstName} ${patient.lastName} ` +
           `(${patient.whatsappPhone}) :\n${urgent.map((a) => `- ${a.message}`).join('\n')}\n\n` +
           `Dossier : ${appUrl(`/medecin/patients/${patient.id}`)}`,
       })

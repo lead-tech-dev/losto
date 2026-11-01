@@ -1,3 +1,4 @@
+import { WhatsAppService } from '../whatsapp/whatsapp.service';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomInt } from 'crypto';
 import { and, desc, eq, inArray } from 'drizzle-orm';
@@ -19,6 +20,7 @@ const STATUSES = ['SENT', 'AWAITING_PAYMENT', 'PREPARING', 'READY', 'DELIVERED',
 @Injectable()
 export class PharmacyService {
   constructor(
+    private readonly whatsapp: WhatsAppService,
     @Inject(DB) private readonly db: Database,
     private readonly team: CareTeamService,
     private readonly notify: NotifyService,
@@ -136,12 +138,14 @@ export class PharmacyService {
     const courierId = await this.team.pickCourier(pat.city);
     const code = newDeliveryCode();
 
-    await this.db.transaction(async (tx) => {
+    const delivery = await this.db.transaction(async (tx) => {
       await tx.update(prescriptions).set({ status: 'READY', readyAt: new Date() }).where(eq(prescriptions.id, prescriptionId));
-      await tx
+      const [d] = await tx
         .insert(deliveries)
         .values({ prescriptionId, code, courierId, status: courierId ? 'ASSIGNED' : 'PENDING' })
-        .onConflictDoNothing();
+        .onConflictDoNothing()
+        .returning();
+      return d;
     });
     await this.audit.log(pharmacyId, 'pharmacy.ready', 'Prescription', prescriptionId);
     await this.notify.family(
@@ -149,8 +153,21 @@ export class PharmacyService {
       `Médicaments de ${pat.firstName} prêts : code de livraison ${code}`,
       `Les médicaments de ${pat.firstName} sont prêts et partent en livraison.\n\n` +
         `CODE DE LIVRAISON : ${code}\n` +
-        `${pat.firstName} devra donner ce code au livreur à la remise du colis. Transmettez-le-lui ; ne le donnez à personne d'autre.`,
+        `${pat.firstName} devra donner ce code au livreur à la remise du colis. ${pat.hasSmartphone ? `Il lui est aussi envoyé sur WhatsApp.` : 'Transmettez-le-lui'} ; ne le donnez à personne d'autre.`,
     );
+    // Le parent reçoit le code directement : c'est lui qui le donne au livreur
+    if (delivery) {
+      await this.whatsapp.toPatient(
+        pat,
+        {
+          kind: 'delivery_code',
+          text: `Bonjour ${pat.firstName}, vos médicaments arrivent. Donnez ce code au livreur, et à lui seulement : ${code}. Merci, Proche Santé.`,
+          template: { name: 'ps_code_livraison', params: [pat.firstName, code] },
+          dedupeKey: `code:${delivery.id}`,
+        },
+        { evenIfOptedOut: true },
+      );
+    }
     return { status: 'READY', courierAssigned: Boolean(courierId) };
   }
 

@@ -18,6 +18,8 @@ import {
 import { PatientFile } from '../../types';
 import { useApi } from '../../useApi';
 import ConsultationPanel from './ConsultationPanel';
+import WaThread from '../../components/WaThread';
+import { WaMessage } from '../../types';
 
 function ReviewForm({ id, onDone }: { id: string; onDone: () => void }) {
   const [comment, setComment] = useState('');
@@ -39,6 +41,29 @@ function ReviewForm({ id, onDone }: { id: string; onDone: () => void }) {
       <button type="button" className="btn btn-small" onClick={send}>Marquer comme lus</button>
       {error && <p className="error">{error}</p>}
     </div>
+  );
+}
+
+// Messages WhatsApp du parent : questions transmises au médecin, relevés envoyés, rappels
+function WhatsAppCard({ patientId }: { patientId: string }) {
+  const { data, reload } = useApi<{ windowOpen: boolean; messages: WaMessage[] }>(`/doctor/patients/${patientId}/whatsapp`);
+  if (!data) return null;
+  const pending = data.messages.filter((m) => m.direction === 'IN' && m.needsHuman && !m.handledAt).length;
+  return (
+    <section className={`card ${pending ? 'card-alert' : ''}`}>
+      <div className="section-head">
+        <h2>WhatsApp</h2>
+        {pending > 0 && <span className="badge badge-warn">{pending} question{pending > 1 ? 's' : ''} pour vous</span>}
+      </div>
+      <WaThread
+        messages={data.messages.slice(-40)}
+        windowOpen={data.windowOpen}
+        onReply={async (text) => {
+          await api(`/doctor/patients/${patientId}/whatsapp/reply`, { method: 'POST', body: JSON.stringify({ text }) });
+          reload();
+        }}
+      />
+    </section>
   );
 }
 
@@ -175,6 +200,8 @@ export default function DoctorPatientFile() {
           )}
         </section>
       )}
+
+      <WhatsAppCard patientId={p.id} />
 
       <section className="card">
         <h2>Historique</h2>

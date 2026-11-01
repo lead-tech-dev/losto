@@ -117,6 +117,39 @@ Une valeur urgente mesurée à domicile s'affiche avec la conduite à tenir sur 
 
 Une tâche quotidienne (7 h 30, heure du Cameroun) affecte les livraisons et les analyses restées sans livreur ou sans laboratoire.
 
+## WhatsApp
+
+Le parent n'installe rien : tout passe par WhatsApp, via l'**API Cloud de Meta** (sans intermédiaire). Chaque message, reçu ou envoyé, est enregistré (`whatsapp_messages`).
+
+**Ce que le parent peut écrire**
+
+| Message | Effet |
+|---|---|
+| `13/8`, `135/85`, `tension 14 9` | Tension enregistrée (13/8 = 130/80 mmHg), alerte au médecin et à la famille si elle dépasse les seuils |
+| `glycémie 1,2`, `sucre 120` | Glycémie en g/L (120 mg/dL converti) ; unité demandée si ambiguë |
+| `poids 72` | Poids |
+| `OK` | Prise de médicaments confirmée (comptée dans le compte rendu) |
+| `OUI` | Consentement au suivi |
+| `STOP` / `REPRENDRE` | Arrêt / reprise des messages automatiques (le code de livraison part quand même) |
+| `rendez-vous`, `livraison` | Réponse automatique avec le prochain rendez-vous ou l'état de la livraison |
+| Malaise, douleur à la poitrine, chute… | Consigne d'appeler le **119**, alerte urgente, famille, médecin et équipe prévenus |
+| Question de santé | Jamais de réponse automatique : transmise au médecin, qui répond depuis le dossier |
+| Autre question, message vocal | Transmis à l'équipe (ou à l'assistant si `ANTHROPIC_API_KEY` est renseignée, pour les seules questions pratiques) |
+
+Deux parents sur le même numéro : le message commence par le prénom (« Paul 13/8 »).
+
+**Envois automatiques** (tâche toutes les 5 minutes) : bienvenue à l'inscription, rappel de médicaments aux heures cochées par le médecin (ou devinées depuis la posologie : « matin et soir » → 8 h et 20 h), regroupés par moment ; rappel de rendez-vous la veille à 18 h et 2 h avant, avec le lien vidéo ; code de livraison au parent. Chaque rappel a une clé unique : jamais envoyé deux fois.
+
+**Famille** : chaque notification par e-mail part aussi sur WhatsApp (désactivable dans le profil).
+
+**Fenêtre de 24 h** : WhatsApp n'autorise un texte libre que dans les 24 h qui suivent le dernier message du destinataire ; sinon il faut un modèle validé par Meta. L'application choisit seule. Les 5 modèles à faire valider sont dans `apps/api/src/whatsapp/templates.ts` (et affichés dans l'espace admin, page WhatsApp).
+
+**Comptes rendus mensuels** : le 1er du mois à 6 h, un brouillon par parent (consultations, moyennes des relevés, alertes, prises confirmées, livraisons, analyses, prochain rendez-vous). L'équipe le relit et l'envoie ; la famille ne voit rien avant.
+
+**Brancher Meta** : créer l'application et le numéro dans le gestionnaire WhatsApp, renseigner les variables `WHATSAPP_*` (voir `.env.example`), déclarer le webhook `https://<api>/api/webhooks/whatsapp` (abonnement `messages`) avec `WHATSAPP_VERIFY_TOKEN`, puis soumettre les modèles. En développement, `WHATSAPP_SIMULATION=true` : rien ne part et un simulateur dans l'espace admin permet d'écrire « comme un parent ».
+
+**Données personnelles** : les messages des parents sont des données de santé. L'assistant (facultatif) envoie le texte des questions non médicales à l'API d'Anthropic : à couvrir dans la politique de confidentialité (module 8).
+
 ## Modifier le schéma
 
 1. Modifie `apps/api/src/db/schema.ts`.
@@ -138,6 +171,6 @@ DATABASE_URL="postgresql://losto:losto@localhost:5432/losto_test" npm test
 - [x] Module 3 : paiements (Mobile Money via Tranzak, carte via Stripe, relances, factures)
 - [x] Module 4 : portail médecin et infirmier (agenda, téléconsultation, compte rendu, ordonnance, visites, alertes)
 - [x] Module 5 : pharmacie, laboratoire et livraison (prix, paiement, préparation, livraison contre code, prises de sang, résultats relus par le médecin)
-- [ ] Module 6 : WhatsApp (rappels, relevés, compte rendu mensuel, assistant)
+- [x] Module 6 : WhatsApp (relevés par message, urgences, rappels, code de livraison, comptes rendus mensuels, assistant)
 - [ ] Module 7 : back-office et indicateurs
 - [ ] Module 8 : mise en production

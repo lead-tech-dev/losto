@@ -1,3 +1,4 @@
+import { WhatsAppService } from '../whatsapp/whatsapp.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { asc, eq, inArray } from 'drizzle-orm';
 import { AuditService } from '../audit/audit.service';
@@ -6,7 +7,7 @@ import { normalizeCameroonPhone } from '../common/text';
 import { randomToken } from '../common/tokens';
 import { CoverageService } from '../coverage/coverage.service';
 import { Database, DB } from '../db/db.module';
-import { Patient, patientMembers, patients, Plan, subscriptions } from '../db/schema';
+import { Patient, patientMembers, patients, Plan, subscriptions, users } from '../db/schema';
 import { CreatePatientDto, UpdatePatientDto } from './dto/patient.dto';
 import { PatientAccessService, PatientRole } from './patient-access.service';
 import { PLAN_PRICES_EUR } from './plans';
@@ -20,6 +21,7 @@ export class PatientsService {
     private readonly access: PatientAccessService,
     private readonly coverage: CoverageService,
     private readonly audit: AuditService,
+    private readonly whatsapp: WhatsAppService,
   ) {}
 
   async create(userId: string, dto: CreatePatientDto) {
@@ -48,6 +50,9 @@ export class PatientsService {
       return p;
     });
     await this.audit.log(userId, 'patient.create', 'Patient', patient.id);
+    // Message de bienvenue au parent, qui accepte le suivi en répondant OUI
+    const [owner] = await this.db.select().from(users).where(eq(users.id, userId));
+    await this.whatsapp.welcome(patient, `${owner.firstName} ${owner.lastName}`).catch(() => undefined);
     return this.detail(userId, patient.id);
   }
 
@@ -87,7 +92,8 @@ export class PatientsService {
       currentTreatments: patient.currentTreatments,
       notes: patient.notes,
       createdAt: patient.createdAt,
-      // Lien à faire suivre au parent tant que l'envoi WhatsApp automatique (module 6) n'existe pas
+      whatsappOptOut: Boolean(patient.whatsappOptOutAt),
+      // Le parent peut aussi accepter par ce lien (s'il n'a pas WhatsApp, la famille le lui transmet)
       consentUrl: role === 'OWNER' && !patient.consentGivenAt ? appUrl(`/consentement/${patient.consentToken}`) : null,
     };
   }

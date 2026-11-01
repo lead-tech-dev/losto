@@ -273,3 +273,22 @@ fieldset.row legend { width: 100%; }
 .code-show { font-size: 26px; letter-spacing: 6px; color: var(--green); }
 .lab-item { padding: 6px 0; }
 .lab-item .badge { margin-left: 6px; }
+
+/* ---------- Module 6 : WhatsApp ---------- */
+.wa-list { max-height: 520px; background: #efeae2; border-radius: 12px; padding: 12px; }
+.bubble.theirs { background: #fff; }
+.bubble.wa-out { background: #d9fdd3; color: var(--ink, #1c2421); border: none; }
+.bubble.wa-out .bubble-meta { color: var(--muted); }
+.bubble.flagged { box-shadow: 0 0 0 2px #c98a1b; }
+.bubble.wa-emergency { background: #fde3dc; }
+.bubble-kind { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 2px; }
+.thread-sum { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; }
+.template { border-top: 1px solid var(--line); padding: 10px 0; }
+.template p { margin: 4px 0 0; }
+.report-edit { width: 100%; font-size: 15px; line-height: 1.5; }
+.slot-chips { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip { font: inherit; font-size: 14px; border: 1px solid #d6d3c8; background: #fff; border-radius: 999px; padding: 6px 12px; min-height: 36px; cursor: pointer; }
+.chip.on { background: var(--green-soft, #e3f1ea); border-color: var(--green); color: var(--green); font-weight: 600; }
+.link-btn.small { font-size: 14px; }
+.thread-item .badge { white-space: nowrap; }

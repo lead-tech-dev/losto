@@ -17,6 +17,8 @@ import { MailModule } from './mail/mail.module';
 import { MessagesModule } from './messages/messages.module';
 import { PatientsModule } from './patients/patients.module';
 import { UsersModule } from './users/users.module';
+import { WhatsAppCoreModule } from './whatsapp/whatsapp-core.module';
+import { WhatsAppModule } from './whatsapp/whatsapp.module';
 
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { UsersModule } from './users/users.module';
     // Limite à 100 requêtes par minute et par adresse IP (protège contre le bourrage de mots de passe)
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     DbModule,
+    WhatsAppCoreModule,
     MailModule,
     AuditModule,
     AuthModule,
@@ -35,6 +38,7 @@ import { UsersModule } from './users/users.module';
     BillingModule,
     CareModule,
     LogisticsModule,
+    WhatsAppModule,
   ],
   controllers: [HealthController],
   providers: [

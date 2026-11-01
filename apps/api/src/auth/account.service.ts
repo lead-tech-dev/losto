@@ -90,6 +90,7 @@ export class AccountService {
         lastName: dto.lastName?.trim(),
         // Chaîne vide = numéro retiré
         phone: dto.phone === undefined ? undefined : dto.phone.trim() || null,
+        whatsappNotifications: dto.whatsappNotifications,
       })
       .where(eq(users.id, userId))
       .returning();

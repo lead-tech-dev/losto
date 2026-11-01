@@ -13,7 +13,7 @@ import {
   subscriptions,
   users,
 } from '../db/schema';
-import { MailerService } from '../mail/mailer.service';
+import { NotifyService } from '../mail/notify.service';
 import { BusyInterval, findFreeSlot, fmtLocal } from './care-time';
 import { CareTeamService } from './care-team.service';
 import { newVideoUrl } from './video';
@@ -47,7 +47,7 @@ export class SchedulingService {
   constructor(
     @Inject(DB) private readonly db: Database,
     private readonly team: CareTeamService,
-    private readonly mailer: MailerService,
+    private readonly notify: NotifyService,
   ) {}
 
   @Cron('0 7 * * *', { timeZone: 'Africa/Douala' })
@@ -267,10 +267,7 @@ export class SchedulingService {
   }
 
   private async notifyFamily(patient: Patient, subject: string, text: string) {
-    const [owner] = await this.db.select().from(users).where(eq(users.id, patient.familyUserId));
-    if (!owner) return;
-    await this.mailer
-      .send({ to: owner.email, subject, text: `Bonjour ${owner.firstName},\n\n${text}\n\nL’équipe Proche Santé` })
-      .catch((e) => this.logger.error(`E-mail famille : ${e.message}`));
+    await this.notify.family(patient.id, subject, text);
   }
+
 }

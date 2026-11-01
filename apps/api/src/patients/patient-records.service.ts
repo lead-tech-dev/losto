@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, desc, eq, gte, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNotNull, ne } from 'drizzle-orm';
 import { AuditService } from '../audit/audit.service';
 import { Database, DB } from '../db/db.module';
 import {
@@ -184,7 +184,7 @@ export class PatientRecordsService {
         sentAt: monthlyReports.sentAt,
       })
       .from(monthlyReports)
-      .where(eq(monthlyReports.patientId, patientId))
+      .where(and(eq(monthlyReports.patientId, patientId), isNotNull(monthlyReports.sentAt))) // brouillons non relus : invisibles
       .orderBy(desc(monthlyReports.month));
   }
 

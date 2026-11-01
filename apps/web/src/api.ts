@@ -9,6 +9,7 @@ export interface User {
   firstName: string;
   lastName: string;
   phone: string | null;
+  whatsappNotifications?: boolean;
 }
 
 export interface AuthResponse {

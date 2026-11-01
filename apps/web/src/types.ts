@@ -30,6 +30,7 @@ export interface PatientDetail extends PatientSummary {
   notes: string | null;
   createdAt: string;
   consentUrl: string | null;
+  whatsappOptOut?: boolean;
 }
 
 export interface Reading {
@@ -46,6 +47,7 @@ export interface PrescriptionItem {
   name: string;
   dosage?: string;
   quantity?: number;
+  times?: string[];
 }
 
 export interface Dashboard {
@@ -294,4 +296,40 @@ export interface CourierDelivery {
   createdAt: string;
   pickup: { name: string; phone: string | null };
   dropoff: { name: string; phone: string; address: string };
+}
+
+// ---------- WhatsApp ----------
+
+export interface WaMessage {
+  id: string;
+  direction: 'IN' | 'OUT';
+  kind: string;
+  template: string | null;
+  body: string;
+  status: 'RECEIVED' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | 'SKIPPED';
+  error: string | null;
+  needsHuman: boolean;
+  handledAt: string | null;
+  acknowledgedAt: string | null;
+  createdAt: string;
+  patientId: string | null;
+}
+
+export interface WaThreadSummary {
+  phone: string;
+  lastAt: string;
+  lastBody: string;
+  lastDirection: 'IN' | 'OUT';
+  pending: number;
+  names: string | null;
+}
+
+export interface MonthlyReportRow {
+  id: string;
+  month: string;
+  content: string;
+  sentAt: string | null;
+  createdAt: string;
+  patientId: string;
+  patientName: string;
 }

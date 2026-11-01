@@ -43,6 +43,13 @@
       "when": 1793526936874,
       "tag": "0005_relecture_analyses",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793532452778,
+      "tag": "0006_whatsapp",
+      "breakpoints": true
     }
   ]
 }
