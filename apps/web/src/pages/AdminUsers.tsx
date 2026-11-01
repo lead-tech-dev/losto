@@ -7,7 +7,7 @@ interface AdminUser extends User {
   partnerProfile: { city: string; organizationName: string | null; licenseNumber: string | null; verifiedAt: string | null } | null;
 }
 
-const STAFF_ROLES: Role[] = ['DOCTOR', 'NURSE', 'PHARMACY', 'COURIER', 'ADMIN'];
+const STAFF_ROLES: Role[] = ['DOCTOR', 'NURSE', 'PHARMACY', 'LAB', 'COURIER', 'ADMIN'];
 const EMPTY = { email: '', password: '', role: 'DOCTOR' as Role, firstName: '', lastName: '', phone: '', city: 'DOUALA', organizationName: '', licenseNumber: '' };
 
 export default function AdminUsers() {

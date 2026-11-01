@@ -24,11 +24,33 @@ export default function PrescriptionsTab({ patient }: { patient: PatientDetail }
   }
 
   const toPay = data.filter((p) => p.status === 'AWAITING_PAYMENT' && p.priceXaf);
+  const inDelivery = data.filter((p) => p.deliveryCode);
+  const refused = data.filter((p) => p.status === 'CANCELED' && p.cancelReason);
   const isOwner = patient.role === 'OWNER';
 
   return (
     <div className="stack">
       {paidInfo && <div className="notice notice-ok">{paidInfo}</div>}
+
+      {inDelivery.map((p) => (
+        <section key={p.id} className="card card-accent">
+          <h3>Médicaments en livraison</h3>
+          <p className="small">
+            Ordonnance du {fmtDate(p.createdAt)} : {p.items.map((it) => it.name).join(', ')}
+          </p>
+          <p>
+            Code à donner au livreur : <strong className="code-show">{p.deliveryCode}</strong>
+          </p>
+          <p className="muted small">
+            Transmettez-le à {patient.firstName} ; le livreur ne remet le colis que contre ce code. Ne le communiquez à personne d'autre.
+          </p>
+        </section>
+      ))}
+      {refused.map((p) => (
+        <p key={p.id} className="notice notice-warn">
+          La pharmacie n'a pas pu servir l'ordonnance du {fmtDate(p.createdAt)} : {p.cancelReason}. Le médecin a été prévenu et va proposer une alternative.
+        </p>
+      ))}
 
       {toPay.map((p) => (
         <section key={p.id} className="card card-accent">
@@ -42,6 +64,7 @@ export default function PrescriptionsTab({ patient }: { patient: PatientDetail }
               </li>
             ))}
           </ul>
+          {p.pharmacyNote && <p className="small">Note de la pharmacie : {p.pharmacyNote}</p>}
           <p className="muted small">Prix de la pharmacie, sans marge. Elle prépare la commande dès le paiement, puis un livreur l'apporte.</p>
           {!isOwner ? (
             <p className="muted small">Le titulaire du compte valide et règle les médicaments.</p>

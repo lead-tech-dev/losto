@@ -173,7 +173,7 @@ describe('Espace famille', () => {
           priceXaf: 4500,
         })
         .returning();
-      await db.insert(deliveries).values({ prescriptionId: presc.id, status: 'DELIVERED', deliveredAt: new Date() });
+      await db.insert(deliveries).values({ prescriptionId: presc.id, code: '1234', status: 'DELIVERED', deliveredAt: new Date() });
       await db.insert(readings).values([
         { patientId, type: 'GLUCOSE', value: '1.40', measuredAt: new Date(Date.now() - 200 * DAY), source: 'WHATSAPP' },
         { patientId, type: 'GLUCOSE', value: '1.30', measuredAt: new Date(Date.now() - 20 * DAY), source: 'WHATSAPP' },

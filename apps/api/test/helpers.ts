@@ -93,10 +93,10 @@ export async function createTestApp(): Promise<{
   stripe: FakeStripe;
   tranzak: FakeTranzak;
 }> {
-  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL doit pointer vers une base de test');
+  const url = testDatabaseUrl();
   process.env.JWT_SECRET ??= 'secret-de-test-suffisamment-long';
   process.env.TRANZAK_WEBHOOK_AUTH_KEY = TRANZAK_AUTH_KEY;
-  await runMigrations(process.env.DATABASE_URL);
+  await runMigrations(url);
 
   const stripe = new FakeStripe();
   const tranzak = new FakeTranzak();
@@ -137,4 +137,13 @@ export function tokenFromMail(text: string): string {
   const m = text.match(/token=([\w-]+)/);
   if (!m) throw new Error(`Pas de jeton dans l'e-mail : ${text}`);
   return m[1];
+}
+
+// Les tests vident les tables : on refuse toute base dont le nom ne contient pas « test ».
+export function testDatabaseUrl(): string {
+  const url = process.env.DATABASE_URL;
+  if (!url || !/test/i.test(new URL(url).pathname)) {
+    throw new Error('DATABASE_URL doit pointer vers une base de test (nom contenant « test »), ex. postgresql://…/losto_test');
+  }
+  return url;
 }

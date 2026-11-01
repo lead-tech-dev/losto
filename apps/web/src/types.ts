@@ -68,7 +68,20 @@ export interface Consultation {
   summary: string | null;
   doctorName: string;
   referrals?: { destination: string; urgency: string; reason: string }[];
-  labRequests?: { tests: string[]; status: string; results: string | null }[];
+  labRequests?: FamilyLab[];
+}
+
+export interface FamilyLab {
+  id: string;
+  tests: string[];
+  note: string | null;
+  status: string;
+  appointmentAt: string | null;
+  appointmentMode: 'AT_LAB' | 'HOME_SAMPLING' | null;
+  awaitingDoctorReview: boolean;
+  results: string | null;
+  doctorComment: string | null;
+  createdAt: string;
 }
 
 export interface Report {
@@ -87,6 +100,9 @@ export interface Prescription {
   doctorName: string;
   deliveryStatus: string | null;
   deliveredAt: string | null;
+  deliveryCode?: string | null;
+  pharmacyNote?: string | null;
+  cancelReason?: string | null;
 }
 
 export interface Members {
@@ -207,7 +223,7 @@ export interface PatientFile {
   };
   consultations: ConsultationView[];
   prescriptions: { id: string; items: PrescriptionItem[]; status: string; createdAt: string; consultationId: string }[];
-  labRequests: { id: string; tests: string[]; status: string; results: string | null; createdAt: string }[];
+  labRequests: { id: string; tests: string[]; status: string; results: string | null; resultsAbnormal: boolean | null; reviewedAt: string | null; doctorComment: string | null; note: string | null; createdAt: string }[];
   referrals: { id: string; destination: string; urgency: string; reason: string; createdAt: string }[];
   homeVisits: { id: string; scheduledAt: string; status: string; note: string | null; treatmentChecked: boolean | null }[];
   readings: Reading[];
@@ -234,4 +250,48 @@ export interface NurseVisitDetail {
   patient: { id: string; name: string; birthYear: number | null; phone: string; address: string; conditions: string[]; notes: string | null };
   treatment: { items: PrescriptionItem[]; since: string } | { declared: string } | null;
   recentReadings: { type: string; systolic: number | null; diastolic: number | null; value: number | null; measuredAt: string }[];
+}
+
+// ---------- Pharmacie, laboratoire, livreur ----------
+
+export interface PharmacyPrescription {
+  id: string;
+  items: PrescriptionItem[];
+  status: string;
+  priceXaf: number | null;
+  pharmacyNote: string | null;
+  cancelReason: string | null;
+  createdAt: string;
+  readyAt: string | null;
+  patientName: string;
+  district: string;
+  doctorName: string;
+  deliveryStatus: string | null;
+}
+
+export interface LabRequestRow {
+  id: string;
+  tests: string[];
+  note: string | null;
+  status: string;
+  appointmentAt: string | null;
+  appointmentMode: 'AT_LAB' | 'HOME_SAMPLING' | null;
+  sampledAt: string | null;
+  results: string | null;
+  resultsAbnormal: boolean | null;
+  resultsAt: string | null;
+  createdAt: string;
+  patient: { name: string; phone: string; address: string };
+  doctorName: string;
+}
+
+export interface CourierDelivery {
+  id: string;
+  status: 'ASSIGNED' | 'IN_TRANSIT' | 'FAILED';
+  attempts: number;
+  failureReason: string | null;
+  pickedUpAt: string | null;
+  createdAt: string;
+  pickup: { name: string; phone: string | null };
+  dropoff: { name: string; phone: string; address: string };
 }

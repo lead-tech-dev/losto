@@ -7,6 +7,7 @@ import {
   availabilitySlots,
   consultations,
   homeVisits,
+  labRequests,
   Patient,
   patients,
   subscriptions,
@@ -18,6 +19,19 @@ import { CareTeamService } from './care-team.service';
 import { newVideoUrl } from './video';
 
 const HOUR = 60 * 60 * 1000;
+
+const PANELS: Record<string, string[]> = {
+  DIABETES: ['Glycémie à jeun', 'HbA1c', 'Créatinine'],
+  HYPERTENSION: ['Créatinine', 'Ionogramme'],
+  CHOLESTEROL: ['Bilan lipidique'],
+  THYROID: ['TSH'],
+  SENIOR_FOLLOWUP: ['NFS', 'Créatinine'],
+  ASTHMA: [],
+};
+
+export function quarterlyPanel(conditions: string[]): string[] {
+  return [...new Set(conditions.flatMap((c) => PANELS[c] ?? []))];
+}
 const DAY = 24 * HOUR;
 const CONSULTATION_MINUTES = 20;
 const VISIT_MINUTES = 45;
@@ -55,7 +69,7 @@ export class SchedulingService {
   }
 
   async ensureForPatient(patientId: string, now = new Date()) {
-    const result = { consultation: false, visit: false, unassigned: false };
+    const result = { consultation: false, visit: false, unassigned: false, labs: false };
     const [sub] = await this.db.select().from(subscriptions).where(eq(subscriptions.patientId, patientId)).limit(1);
     if (!sub || sub.status !== 'ACTIVE' || !sub.currentPeriodEnd) return result;
 
@@ -97,6 +111,8 @@ export class SchedulingService {
       }
     }
 
+    if (serenite && patient.doctorId) result.labs = await this.ensureQuarterlyLabs(patient, now);
+
     if (serenite) {
       if (!patient.nurseId) result.unassigned = true;
       else {
@@ -118,6 +134,28 @@ export class SchedulingService {
       }
     }
     return result;
+  }
+
+  // Formule Sérénité : un bilan sanguin par trimestre, selon les maladies suivies.
+  // Le panel est une proposition de départ à faire valider par le médecin référent ; le médecin peut en demander d'autres.
+  private async ensureQuarterlyLabs(patient: Patient, now: Date): Promise<boolean> {
+    const [recent] = await this.db
+      .select({ id: labRequests.id })
+      .from(labRequests)
+      .where(and(eq(labRequests.patientId, patient.id), gte(labRequests.createdAt, new Date(now.getTime() - 90 * DAY))))
+      .limit(1);
+    if (recent) return false;
+    const tests = quarterlyPanel(patient.conditions);
+    if (!tests.length) return false;
+    const labId = await this.team.ensureLab(patient);
+    await this.db.insert(labRequests).values({
+      patientId: patient.id,
+      requestedById: patient.doctorId!,
+      labId,
+      tests,
+      note: 'Bilan trimestriel de la formule Sérénité',
+    });
+    return true;
   }
 
   // Place une consultation dans le premier créneau libre du médecin (avant `before` si possible).

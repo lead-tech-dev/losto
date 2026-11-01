@@ -29,6 +29,20 @@
       "when": 1793525864454,
       "tag": "0003_soins",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793526850426,
+      "tag": "0004_logistique",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793526936874,
+      "tag": "0005_relecture_analyses",
+      "breakpoints": true
     }
   ]
 }

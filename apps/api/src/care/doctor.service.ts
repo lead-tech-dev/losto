@@ -18,6 +18,7 @@ import {
 } from '../db/schema';
 import { MailerService } from '../mail/mailer.service';
 import { fmtLocal } from './care-time';
+import { CareTeamService } from './care-team.service';
 import { ClinicalAccessService } from './clinical-access.service';
 import { CompleteConsultationDto } from './dto/care.dto';
 import { ReadingsService } from './readings.service';
@@ -37,6 +38,7 @@ export class DoctorService {
     private readonly readingsSvc: ReadingsService,
     private readonly mailer: MailerService,
     private readonly audit: AuditService,
+    private readonly team: CareTeamService,
   ) {}
 
   // Consultations entre deux dates, avec le nom du patient
@@ -148,6 +150,7 @@ export class DoctorService {
       throw new BadRequestException('La consultation n’a pas encore eu lieu');
     }
     if (dto.readings) this.readingsSvc.validate(dto.readings);
+    const labId = dto.labs?.tests.length ? await this.team.ensureLab(patient) : null;
     if (dto.prescription?.length && !patient.pharmacyId) {
       throw new ConflictException('Aucune pharmacie partenaire n’est affectée à ce patient : prévenez l’équipe');
     }
@@ -164,7 +167,7 @@ export class DoctorService {
         await tx.insert(prescriptions).values({ consultationId: c.id, pharmacyId: patient.pharmacyId, items: dto.prescription, status: 'SENT' });
       }
       if (dto.labs?.tests.length) {
-        await tx.insert(labRequests).values({ patientId: patient.id, consultationId: c.id, requestedById: doctorId, tests: dto.labs.tests, note: dto.labs.note });
+        await tx.insert(labRequests).values({ patientId: patient.id, consultationId: c.id, requestedById: doctorId, labId, tests: dto.labs.tests, note: dto.labs.note });
       }
       if (dto.referral) {
         await tx.insert(referrals).values({ patientId: patient.id, consultationId: c.id, doctorId, ...dto.referral, familyNotifiedAt: new Date() });

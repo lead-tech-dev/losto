@@ -9,6 +9,7 @@ import { configureApp } from '../src/app.setup';
 import { Database, DB } from '../src/db/db.module';
 import { runMigrations } from '../src/db/migrate';
 import { auditLogs, Role, users } from '../src/db/schema';
+import { testDatabaseUrl } from './helpers';
 
 describe('Authentification et rôles', () => {
   let app: INestApplication;
@@ -18,9 +19,9 @@ describe('Authentification et rôles', () => {
   const http = () => request(app.getHttpServer());
 
   beforeAll(async () => {
-    if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL doit pointer vers une base de test');
+    const url = testDatabaseUrl();
     process.env.JWT_SECRET ??= 'secret-de-test-suffisamment-long';
-    await runMigrations(process.env.DATABASE_URL);
+    await runMigrations(url);
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();

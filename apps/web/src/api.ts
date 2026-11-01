@@ -1,6 +1,6 @@
 // Petit client HTTP : ajoute le jeton de connexion et transforme les erreurs de l'API en messages lisibles.
 
-export type Role = 'FAMILY' | 'DOCTOR' | 'NURSE' | 'PHARMACY' | 'COURIER' | 'ADMIN';
+export type Role = 'FAMILY' | 'DOCTOR' | 'NURSE' | 'PHARMACY' | 'LAB' | 'COURIER' | 'ADMIN';
 
 export interface User {
   id: string;

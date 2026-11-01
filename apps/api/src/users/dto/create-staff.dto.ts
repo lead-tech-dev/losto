@@ -2,7 +2,7 @@ import { IsEmail, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } fr
 import { CITIES, City, Role } from '../../db/schema';
 
 // Rôles que l'admin peut créer. FAMILY est exclu : les familles s'inscrivent elles-mêmes.
-export const STAFF_ROLES = [Role.DOCTOR, Role.NURSE, Role.PHARMACY, Role.COURIER, Role.ADMIN] as const;
+export const STAFF_ROLES = [Role.DOCTOR, Role.NURSE, Role.PHARMACY, Role.LAB, Role.COURIER, Role.ADMIN] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export class CreateStaffDto {

@@ -163,10 +163,15 @@ export class PatientRecordsService {
       referrals: refs
         .filter((r) => r.consultationId === c.id)
         .map((r) => ({ destination: r.destination, urgency: r.urgency, reason: r.reason })),
-      labRequests: labs
-        .filter((l) => l.consultationId === c.id)
-        .map((l) => ({ tests: l.tests, status: l.status, results: l.results })),
+      labRequests: labs.filter((l) => l.consultationId === c.id).map(familyLabView),
     }));
+  }
+
+  // Toutes les analyses (y compris le bilan trimestriel Sérénité, qui ne dépend pas d'une consultation)
+  async labs(userId: string, patientId: string) {
+    await this.access.resolve(userId, patientId);
+    const rows = await this.db.select().from(labRequests).where(eq(labRequests.patientId, patientId)).orderBy(desc(labRequests.createdAt));
+    return rows.map(familyLabView);
   }
 
   async reports(userId: string, patientId: string) {
@@ -196,6 +201,9 @@ export class PatientRecordsService {
         doctorLastName: users.lastName,
         deliveryStatus: deliveries.status,
         deliveredAt: deliveries.deliveredAt,
+        deliveryCode: deliveries.code,
+        pharmacyNote: prescriptions.pharmacyNote,
+        cancelReason: prescriptions.cancelReason,
       })
       .from(prescriptions)
       .innerJoin(consultations, eq(consultations.id, prescriptions.consultationId))
@@ -203,11 +211,30 @@ export class PatientRecordsService {
       .leftJoin(deliveries, eq(deliveries.prescriptionId, prescriptions.id))
       .where(eq(consultations.patientId, patientId))
       .orderBy(desc(prescriptions.createdAt));
-    return rows.map(({ doctorFirstName, doctorLastName, ...p }) => ({
+    return rows.map(({ doctorFirstName, doctorLastName, deliveryCode, ...p }) => ({
       ...p,
       doctorName: `Dr ${doctorFirstName} ${doctorLastName}`,
+      // Le code n'est utile que tant que le colis n'est pas remis
+      deliveryCode: p.deliveryStatus && ['PENDING', 'ASSIGNED', 'IN_TRANSIT', 'FAILED'].includes(p.deliveryStatus) ? deliveryCode : null,
     }));
   }
+}
+
+// Résultats visibles par la famille seulement après lecture et commentaire du médecin
+function familyLabView(l: typeof labRequests.$inferSelect) {
+  const reviewed = Boolean(l.reviewedAt);
+  return {
+    id: l.id,
+    tests: l.tests as string[],
+    note: l.note,
+    status: l.status,
+    appointmentAt: l.appointmentAt,
+    appointmentMode: l.appointmentMode,
+    awaitingDoctorReview: l.status === 'RESULTS_AVAILABLE' && !reviewed,
+    results: reviewed ? l.results : null,
+    doctorComment: reviewed ? l.doctorComment : null,
+    createdAt: l.createdAt,
+  };
 }
 
 function toReading(r: typeof readings.$inferSelect) {

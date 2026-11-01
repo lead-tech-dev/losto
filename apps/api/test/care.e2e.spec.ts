@@ -194,7 +194,10 @@ describe('Portail soignants', () => {
       expect(c.status).toBe('DONE');
       const [presc] = await db.select().from(prescriptions).where(eq(prescriptions.consultationId, initialId));
       expect(presc).toMatchObject({ status: 'SENT', pharmacyId: pharmacy.id });
-      expect(await db.select().from(labRequests).where(eq(labRequests.patientId, marie))).toHaveLength(1);
+      const labs = await db.select().from(labRequests).where(eq(labRequests.patientId, marie));
+      // Celle de la consultation, plus le bilan trimestriel Sérénité créé à l'activation
+      expect(labs.filter((l) => l.consultationId === initialId).map((l) => l.tests)).toEqual([['HbA1c', 'Créatinine']]);
+      expect(labs.filter((l) => l.consultationId === null).map((l) => l.note)).toEqual(['Bilan trimestriel de la formule Sérénité']);
       expect(await db.select().from(referrals).where(eq(referrals.patientId, marie))).toHaveLength(1);
       expect(mailer.outbox[0].subject).toBe('Important : Marie doit consulter Cardiologue');
 

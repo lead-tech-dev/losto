@@ -18,7 +18,7 @@ import {
 
 // ---------- Types énumérés ----------
 
-export const ROLES = ['FAMILY', 'DOCTOR', 'NURSE', 'PHARMACY', 'COURIER', 'ADMIN'] as const;
+export const ROLES = ['FAMILY', 'DOCTOR', 'NURSE', 'PHARMACY', 'LAB', 'COURIER', 'ADMIN'] as const;
 export type Role = (typeof ROLES)[number];
 // Role.ADMIN, Role.FAMILY... pour écrire le code sans faute de frappe
 export const Role = Object.fromEntries(ROLES.map((r) => [r, r])) as { [K in Role]: K };
@@ -67,6 +67,8 @@ export const readingTypeEnum = pgEnum('reading_type', READING_TYPES);
 export const readingSourceEnum = pgEnum('reading_source', ['WHATSAPP', 'NURSE', 'DOCTOR']);
 export const consultationKindEnum = pgEnum('consultation_kind', ['INITIAL', 'MONTHLY', 'EXTRA']); // bilan de départ, mensuelle, en plus
 export const labStatusEnum = pgEnum('lab_status', ['REQUESTED', 'SAMPLED', 'RESULTS_AVAILABLE', 'CANCELED']);
+export const LAB_APPOINTMENT_MODES = ['AT_LAB', 'HOME_SAMPLING'] as const;
+export const labAppointmentModeEnum = pgEnum('lab_appointment_mode', LAB_APPOINTMENT_MODES);
 export const REFERRAL_URGENCIES = ['ROUTINE', 'URGENT', 'EMERGENCY'] as const;
 export const referralUrgencyEnum = pgEnum('referral_urgency', REFERRAL_URGENCIES);
 export const alertSeverityEnum = pgEnum('alert_severity', ['WARNING', 'URGENT']);
@@ -134,6 +136,7 @@ export const patients = pgTable(
     doctorId: uuid('doctor_id').references(() => users.id),
     nurseId: uuid('nurse_id').references(() => users.id),
     pharmacyId: uuid('pharmacy_id').references(() => users.id),
+    labId: uuid('lab_id').references(() => users.id),
     // Consentement : le parent confirme lui-même (lien envoyé par WhatsApp) qu'il accepte d'être suivi
     consentToken: text('consent_token').notNull().unique(),
     consentGivenAt: timestamp('consent_given_at', { withTimezone: true }),
@@ -363,6 +366,14 @@ export const labRequests = pgTable('lab_requests', {
   tests: jsonb('tests').notNull(), // ["HbA1c", "Créatinine"]
   note: text('note'),
   status: labStatusEnum('status').notNull().default('REQUESTED'),
+  labId: uuid('lab_id').references(() => users.id), // laboratoire partenaire chargé du prélèvement
+  appointmentAt: timestamp('appointment_at', { withTimezone: true }),
+  appointmentMode: labAppointmentModeEnum('appointment_mode'),
+  sampledAt: timestamp('sampled_at', { withTimezone: true }),
+  resultsAbnormal: boolean('results_abnormal'),
+  // Résultats visibles par la famille seulement une fois lus et commentés par le médecin
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  doctorComment: text('doctor_comment'),
   results: text('results'),
   resultsAt: timestamp('results_at', { withTimezone: true }),
   createdAt: createdAt(),
@@ -395,6 +406,7 @@ export const alerts = pgTable(
       .notNull()
       .references(() => patients.id, { onDelete: 'cascade' }),
     readingId: uuid('reading_id').references(() => readings.id, { onDelete: 'cascade' }),
+    labRequestId: uuid('lab_request_id'),
     doctorId: uuid('doctor_id').references(() => users.id), // médecin du parent au moment de l'alerte
     severity: alertSeverityEnum('severity').notNull(),
     message: text('message').notNull(),
@@ -416,6 +428,10 @@ export const prescriptions = pgTable('prescriptions', {
   items: jsonb('items').notNull(),
   status: prescriptionStatusEnum('status').notNull().default('SENT'),
   priceXaf: integer('price_xaf'), // prix pharmacie en FCFA, refacturé sans marge
+  pharmacyNote: text('pharmacy_note'), // ex. "Amlodipine remplacée par un générique"
+  cancelReason: text('cancel_reason'),
+  pricedAt: timestamp('priced_at', { withTimezone: true }),
+  readyAt: timestamp('ready_at', { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -427,6 +443,12 @@ export const deliveries = pgTable('deliveries', {
     .unique()
     .references(() => prescriptions.id, { onDelete: 'cascade' }),
   courierId: uuid('courier_id').references(() => users.id),
+  // Code à 4 chiffres connu du parent et de la famille, jamais du livreur : il le reçoit à la remise
+  code: text('code').notNull(),
+  codeAttempts: integer('code_attempts').notNull().default(0),
+  attempts: integer('attempts').notNull().default(0), // tentatives de livraison échouées
+  failureReason: text('failure_reason'),
+  pickedUpAt: timestamp('picked_up_at', { withTimezone: true }),
   status: deliveryStatusEnum('status').notNull().default('PENDING'),
   deliveredAt: timestamp('delivered_at', { withTimezone: true }),
   createdAt: createdAt(),

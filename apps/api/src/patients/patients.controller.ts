@@ -57,6 +57,11 @@ export class PatientsController {
     return this.records.consultations(u.id, id);
   }
 
+  @Get(':id/labs')
+  labs(@CurrentUser() u: AuthUser, @Id() id: string) {
+    return this.records.labs(u.id, id);
+  }
+
   @Get(':id/reports')
   reports(@CurrentUser() u: AuthUser, @Id() id: string) {
     return this.records.reports(u.id, id);

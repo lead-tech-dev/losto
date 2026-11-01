@@ -19,6 +19,29 @@ import { PatientFile } from '../../types';
 import { useApi } from '../../useApi';
 import ConsultationPanel from './ConsultationPanel';
 
+function ReviewForm({ id, onDone }: { id: string; onDone: () => void }) {
+  const [comment, setComment] = useState('');
+  const [error, setError] = useState('');
+  async function send() {
+    try {
+      await api(`/doctor/labs/${id}/review`, { method: 'POST', body: JSON.stringify({ comment }) });
+      onDone();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  return (
+    <div className="row align-end">
+      <label>
+        Commentaire pour la famille (rend les résultats visibles)
+        <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Résultats corrects, on continue le traitement." />
+      </label>
+      <button type="button" className="btn btn-small" onClick={send}>Marquer comme lus</button>
+      {error && <p className="error">{error}</p>}
+    </div>
+  );
+}
+
 export default function DoctorPatientFile() {
   const { id } = useParams<{ id: string }>();
   const [params, setParams] = useSearchParams();
@@ -189,9 +212,14 @@ export default function DoctorPatientFile() {
             <h3>Analyses</h3>
             <ul className="plain">
               {f.labRequests.map((l) => (
-                <li key={l.id}>
-                  {fmtDate(l.createdAt)} · {l.tests.join(', ')} · {l.status === 'RESULTS_AVAILABLE' ? 'résultats disponibles' : 'en attente'}
+                <li key={l.id} className="lab-item">
+                  {fmtDate(l.createdAt)} · {l.tests.join(', ')}
+                  {l.note && <span className="muted"> · {l.note}</span>} ·{' '}
+                  {l.status === 'RESULTS_AVAILABLE' ? (l.reviewedAt ? 'lus' : <strong className="tone-warn">résultats à lire</strong>) : 'en attente'}
+                  {l.resultsAbnormal && <span className="badge badge-warn"> anormal</span>}
                   {l.results && <p className="pre small">{l.results}</p>}
+                  {l.doctorComment && <p className="small muted">Votre commentaire : {l.doctorComment}</p>}
+                  {l.status === 'RESULTS_AVAILABLE' && !l.reviewedAt && <ReviewForm id={l.id} onDone={reload} />}
                 </li>
               ))}
             </ul>

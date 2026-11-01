@@ -1,11 +1,11 @@
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { and, asc, count, eq, isNotNull } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNotNull } from 'drizzle-orm';
 import { AuditService } from '../audit/audit.service';
 import { Database, DB } from '../db/db.module';
-import { City, partnerProfiles, Patient, patients, Role, users } from '../db/schema';
+import { City, deliveries, partnerProfiles, Patient, patients, Role, users } from '../db/schema';
 
-type TeamColumn = 'doctorId' | 'nurseId' | 'pharmacyId';
-const COLUMN_ROLE: Record<TeamColumn, Role> = { doctorId: 'DOCTOR', nurseId: 'NURSE', pharmacyId: 'PHARMACY' };
+type TeamColumn = 'doctorId' | 'nurseId' | 'pharmacyId' | 'labId';
+const COLUMN_ROLE: Record<TeamColumn, Role> = { doctorId: 'DOCTOR', nurseId: 'NURSE', pharmacyId: 'PHARMACY', labId: 'LAB' };
 
 // Qui s'occupe de quel parent : un médecin, une pharmacie, et un(e) infirmier(e) pour la formule Sérénité.
 @Injectable()
@@ -34,8 +34,34 @@ export class CareTeamService {
     return updated;
   }
 
-  private async leastLoaded(role: Role, col: TeamColumn, city: City): Promise<string | null> {
-    const candidates = await this.db
+  // Laboratoire : affecté à la première demande d'analyses
+  async ensureLab(patient: Patient): Promise<string | null> {
+    if (patient.labId) return patient.labId;
+    const lab = await this.leastLoaded('LAB', 'labId', patient.city);
+    if (!lab) {
+      this.logger.warn(`Aucun laboratoire disponible à ${patient.city} pour ${patient.id}`);
+      return null;
+    }
+    await this.db.update(patients).set({ labId: lab }).where(eq(patients.id, patient.id));
+    return lab;
+  }
+
+  // Livreur : choisi par livraison, le moins chargé parmi les livraisons en cours de sa ville
+  async pickCourier(city: City): Promise<string | null> {
+    const candidates = await this.verifiedPartners('COURIER', city);
+    if (!candidates.length) return null;
+    const loads = await this.db
+      .select({ id: deliveries.courierId, n: count() })
+      .from(deliveries)
+      .where(and(isNotNull(deliveries.courierId), inArray(deliveries.status, ['ASSIGNED', 'IN_TRANSIT'])))
+      .groupBy(deliveries.courierId);
+    const load = new Map(loads.map((l) => [l.id, l.n]));
+    candidates.sort((a, b) => (load.get(a.id) ?? 0) - (load.get(b.id) ?? 0));
+    return candidates[0].id;
+  }
+
+  private verifiedPartners(role: Role, city: City) {
+    return this.db
       .select({ id: users.id })
       .from(users)
       .innerJoin(partnerProfiles, eq(partnerProfiles.userId, users.id))
@@ -48,6 +74,10 @@ export class CareTeamService {
         ),
       )
       .orderBy(asc(users.createdAt));
+  }
+
+  private async leastLoaded(role: Role, col: TeamColumn, city: City): Promise<string | null> {
+    const candidates = await this.verifiedPartners(role, city);
     if (!candidates.length) return null;
 
     const loads = await this.db

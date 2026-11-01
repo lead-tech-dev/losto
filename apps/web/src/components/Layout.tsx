@@ -8,6 +8,7 @@ export const ROLE_LABELS: Record<string, string> = {
   DOCTOR: 'Médecin',
   NURSE: 'Infirmier(e)',
   PHARMACY: 'Pharmacie',
+  LAB: 'Laboratoire',
   COURIER: 'Livreur',
   ADMIN: 'Admin',
 };

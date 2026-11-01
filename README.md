@@ -45,6 +45,7 @@ Une invitation n'est valable que pour l'adresse e-mail invitée, 7 jours, une se
 | `DOCTOR` | Médecin inscrit à l'Ordre | Par l'admin, après vérification |
 | `NURSE` | Infirmier(e) des visites à domicile | Par l'admin |
 | `PHARMACY` | Pharmacie agréée | Par l'admin |
+| `LAB` | Laboratoire d'analyses | Par l'admin |
 | `COURIER` | Livreur | Par l'admin |
 | `ADMIN` | Équipe Proche Santé | Premier compte via `npm run db:seed`, les suivants par un admin |
 
@@ -106,6 +107,16 @@ Sans clés, le moyen de paiement correspondant est simplement masqué. Pour essa
 
 Une valeur urgente mesurée à domicile s'affiche avec la conduite à tenir sur le téléphone de l'infirmier(e) et part par e-mail au médecin. Les valeurs impossibles (diastolique supérieure à la systolique, glycémie saisie en mg/dL) sont refusées.
 
+## Pharmacie, laboratoire et livraison
+
+**Ordonnance** : la pharmacie du parent chiffre l'ordonnance au prix pharmacie (avec une note éventuelle : générique, conditionnement). La famille valide et paie (Mobile Money ou carte), la pharmacie prépare puis marque la commande « prête ». Un livreur vérifié de la ville est affecté automatiquement (le moins chargé). Si la pharmacie ne peut pas servir, elle indique pourquoi : le médecin et la famille sont prévenus. Le prix ne peut plus changer pendant qu'un paiement est en cours.
+
+**Livraison contre code** : chaque livraison a un code à 4 chiffres, visible par la famille seulement (onglet Ordonnances) et jamais par le livreur. Le livreur le demande au parent pour confirmer la remise. Après 5 codes faux, la livraison est bloquée ; la route est aussi limitée à 10 essais par minute. Un échec (« personne au domicile ») est signalé à la famille, puis le livreur repasse.
+
+**Analyses** : quand le médecin demande des analyses (et chaque trimestre en Sérénité, bilan automatique), le laboratoire du parent fixe la prise de sang (au labo ou à domicile, en heure du Cameroun), la note comme faite, puis saisit les résultats en signalant les valeurs hors normes (alerte au médecin). **La famille ne voit les résultats qu'après lecture du médecin**, avec son commentaire en termes simples.
+
+Une tâche quotidienne (7 h 30, heure du Cameroun) affecte les livraisons et les analyses restées sans livreur ou sans laboratoire.
+
 ## Modifier le schéma
 
 1. Modifie `apps/api/src/db/schema.ts`.
@@ -114,7 +125,7 @@ Une valeur urgente mesurée à domicile s'affiche avec la conduite à tenir sur 
 
 ## Tests
 
-Les tests tournent contre une vraie base PostgreSQL. Utilise une base dédiée : elle est vidée à chaque lancement.
+Les tests tournent contre une vraie base PostgreSQL. Utilise une base dédiée : elle est vidée à chaque lancement, et les tests refusent de tourner sur une base dont le nom ne contient pas « test ».
 
 ```bash
 DATABASE_URL="postgresql://losto:losto@localhost:5432/losto_test" npm test
@@ -126,7 +137,7 @@ DATABASE_URL="postgresql://losto:losto@localhost:5432/losto_test" npm test
 - [x] Module 2 : espace famille (inscription du parent, formule, tableau de bord, partage, messagerie)
 - [x] Module 3 : paiements (Mobile Money via Tranzak, carte via Stripe, relances, factures)
 - [x] Module 4 : portail médecin et infirmier (agenda, téléconsultation, compte rendu, ordonnance, visites, alertes)
-- [ ] Module 5 : pharmacie et livraison
+- [x] Module 5 : pharmacie, laboratoire et livraison (prix, paiement, préparation, livraison contre code, prises de sang, résultats relus par le médecin)
 - [ ] Module 6 : WhatsApp (rappels, relevés, compte rendu mensuel, assistant)
 - [ ] Module 7 : back-office et indicateurs
 - [ ] Module 8 : mise en production

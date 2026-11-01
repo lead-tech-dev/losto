@@ -10,6 +10,6 @@ import { SchedulingService } from './scheduling.service';
 @Module({
   controllers: [AvailabilityController, DoctorController, NurseController, AdminCareController],
   providers: [CareTeamService, ClinicalAccessService, SchedulingService, ReadingsService, DoctorService, NurseService],
-  exports: [SchedulingService, ReadingsService],
+  exports: [SchedulingService, ReadingsService, CareTeamService],
 })
 export class CareModule {}

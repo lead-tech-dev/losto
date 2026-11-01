@@ -106,4 +106,5 @@ export class CareTeamDto {
   @IsOptional() @IsString() doctorId?: string | null;
   @IsOptional() @IsString() nurseId?: string | null;
   @IsOptional() @IsString() pharmacyId?: string | null;
+  @IsOptional() @IsString() labId?: string | null;
 }

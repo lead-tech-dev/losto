@@ -4,6 +4,9 @@ import Layout from '../components/Layout';
 import DoctorHome from './care/DoctorHome';
 import NurseHome from './care/NurseHome';
 import FamilyHome from './family/FamilyHome';
+import CourierHome from './partners/CourierHome';
+import LabHome from './partners/LabHome';
+import PharmacyHome from './partners/PharmacyHome';
 
 // Contenu d'accueil selon le rôle. Chaque espace sera rempli par les modules suivants.
 const SPACES: Record<string, { title: string; text: string; next: string }> = {
@@ -45,6 +48,9 @@ export default function Dashboard() {
   if (user.role === 'FAMILY') return <FamilyHome firstName={user.firstName} />;
   if (user.role === 'DOCTOR') return <DoctorHome firstName={user.lastName} />;
   if (user.role === 'NURSE') return <NurseHome firstName={user.firstName} />;
+  if (user.role === 'PHARMACY') return <PharmacyHome />;
+  if (user.role === 'LAB') return <LabHome />;
+  if (user.role === 'COURIER') return <CourierHome firstName={user.firstName} />;
   const space = SPACES[user.role];
 
   return (
