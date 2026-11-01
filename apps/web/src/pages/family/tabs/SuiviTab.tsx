@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import LineChart from '../../../components/LineChart';
-import { DELIVERY_STATUS, fmtDate, fmtDateTime, fmtShort, MODE_LABELS } from '../../../labels';
+import { DELIVERY_STATUS, fmtDate, fmtShort, fmtSlotCm, KIND_LABELS, MODE_LABELS } from '../../../labels';
 import { Dashboard, PatientDetail, Reading } from '../../../types';
 import { useApi } from '../../../useApi';
 
@@ -30,15 +30,34 @@ export default function SuiviTab({ patient }: { patient: PatientDetail }) {
           <h3>Prochaine consultation</h3>
           {d.nextConsultation ? (
             <>
-              <p className="big">{fmtDateTime(d.nextConsultation.scheduledAt)}</p>
+              <p className="big">{fmtSlotCm(d.nextConsultation.scheduledAt)}</p>
               <p className="muted small">
-                {d.nextConsultation.doctorName} · {MODE_LABELS[d.nextConsultation.mode]}
+                Heure du Cameroun · {KIND_LABELS[d.nextConsultation.kind] ?? 'Consultation'} · {d.nextConsultation.doctorName} ·{' '}
+                {MODE_LABELS[d.nextConsultation.mode]}
               </p>
+              {d.nextConsultation.videoUrl && (
+                <div className="video-box">
+                  <p className="small">
+                    Lien de la visio, à envoyer à {patient.firstName} sur WhatsApp : il l'ouvre à l'heure du rendez-vous,
+                    sans rien installer.
+                  </p>
+                  <CopyText text={d.nextConsultation.videoUrl} />
+                </div>
+              )}
+              {d.nextConsultation.mode === 'PHONE' && <p className="small">Le médecin appellera {patient.firstName} au {patient.whatsappPhone}.</p>}
             </>
           ) : (
-            <p className="muted">Pas encore planifiée. Elle sera fixée après le paiement de la formule.</p>
+            <p className="muted">Pas encore planifiée. Elle est fixée automatiquement dès que le suivi est actif.</p>
           )}
         </section>
+
+        {d.nextVisit && (
+          <section className="card">
+            <h3>Prochaine visite à domicile</h3>
+            <p className="big">{fmtSlotCm(d.nextVisit.scheduledAt)}</p>
+            <p className="muted small">Heure du Cameroun · tension, glycémie et vérification du traitement</p>
+          </section>
+        )}
 
         <section className="card">
           <h3>Derniers relevés</h3>
@@ -108,6 +127,18 @@ export default function SuiviTab({ patient }: { patient: PatientDetail }) {
         )}
       </section>
     </div>
+  );
+}
+
+function CopyText({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <span className="copy-link">
+      <code>{text}</code>
+      <button type="button" className="btn btn-small" onClick={() => navigator.clipboard?.writeText(text).then(() => setCopied(true))}>
+        {copied ? 'Copié' : 'Copier'}
+      </button>
+    </span>
   );
 }
 

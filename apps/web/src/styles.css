@@ -227,3 +227,37 @@ label.pay-method:has(input:focus-visible) { outline: 2px solid var(--green); out
 .spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid var(--green-soft); border-top-color: var(--green); }
 @media (prefers-reduced-motion: no-preference) { .spinner { animation: spin 1s linear infinite; } }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Module 4 : portail soignants ---------- */
+.card-alert { border: 2px solid #c98a1b; background: #fffaf0; }
+.card-urgent { border: 2px solid var(--danger); background: #fdf1f1; }
+.badge-urgent { background: var(--danger); color: #fff; }
+.badge-warn { background: var(--warn-soft); color: var(--warn); }
+.alert-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 6px 0; }
+.alert-row > span:nth-child(2) { flex: 1 1 260px; }
+.agenda { list-style: none; margin: 0; padding: 0; }
+.agenda-day + .agenda-day { margin-top: 12px; }
+.agenda-day h3::first-letter { text-transform: uppercase; }
+.agenda-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.agenda-time { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 52px; }
+.agenda-main { flex: 1 1 240px; display: flex; flex-direction: column; }
+.consult-panel { border: 2px solid var(--green); }
+.consult-panel h2::first-letter { text-transform: uppercase; }
+.presc-line { padding: 10px; background: var(--bg); border-radius: 10px; }
+.slot-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.file-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+.file-grid > .card { margin-bottom: 0; }
+.presc + .presc { border-top: 1px solid var(--line); padding-top: 8px; }
+.presc p { margin: 0 0 4px; }
+.h1-sub { font-size: 18px; font-weight: 400; }
+.link-btn { font: inherit; background: none; border: none; padding: 6px 0; color: var(--green); text-decoration: underline; cursor: pointer; text-align: left; min-height: 32px; }
+.row > label.narrow-wide { flex: 0 1 240px; }
+fieldset.row legend { width: 100%; }
+.avail-day { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.avail-label { width: 90px; }
+.avail-slots { flex: 1 1 320px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.avail-slot { display: inline-flex; gap: 6px; align-items: center; background: var(--bg); border-radius: 10px; padding: 4px 6px; }
+.avail-slot input { padding: 6px 8px; }
+.video-box { background: var(--green-soft); border-radius: 10px; padding: 10px 12px; margin-top: 4px; }
+.video-box p { margin: 0; }
+.big::first-letter { text-transform: uppercase; }

@@ -65,6 +65,11 @@ export const currencyEnum = pgEnum('currency', ['EUR', 'XAF']);
 export const deliveryStatusEnum = pgEnum('delivery_status', ['PENDING', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'FAILED']);
 export const readingTypeEnum = pgEnum('reading_type', READING_TYPES);
 export const readingSourceEnum = pgEnum('reading_source', ['WHATSAPP', 'NURSE', 'DOCTOR']);
+export const consultationKindEnum = pgEnum('consultation_kind', ['INITIAL', 'MONTHLY', 'EXTRA']); // bilan de départ, mensuelle, en plus
+export const labStatusEnum = pgEnum('lab_status', ['REQUESTED', 'SAMPLED', 'RESULTS_AVAILABLE', 'CANCELED']);
+export const REFERRAL_URGENCIES = ['ROUTINE', 'URGENT', 'EMERGENCY'] as const;
+export const referralUrgencyEnum = pgEnum('referral_urgency', REFERRAL_URGENCIES);
+export const alertSeverityEnum = pgEnum('alert_severity', ['WARNING', 'URGENT']);
 
 // Colonnes de dates réutilisées partout
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
@@ -125,6 +130,10 @@ export const patients = pgTable(
     medicalHistory: text('medical_history'), // antécédents
     currentTreatments: text('current_treatments'), // traitements déclarés à l'inscription
     notes: text('notes'),
+    // Équipe soignante, affectée automatiquement à l'activation (modifiable par l'admin)
+    doctorId: uuid('doctor_id').references(() => users.id),
+    nurseId: uuid('nurse_id').references(() => users.id),
+    pharmacyId: uuid('pharmacy_id').references(() => users.id),
     // Consentement : le parent confirme lui-même (lien envoyé par WhatsApp) qu'il accepte d'être suivi
     consentToken: text('consent_token').notNull().unique(),
     consentGivenAt: timestamp('consent_given_at', { withTimezone: true }),
@@ -287,13 +296,114 @@ export const consultations = pgTable(
       .notNull()
       .references(() => users.id),
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
+    durationMinutes: integer('duration_minutes').notNull().default(20),
+    kind: consultationKindEnum('kind').notNull().default('MONTHLY'),
     mode: consultationModeEnum('mode').notNull().default('PHONE'),
     status: consultationStatusEnum('status').notNull().default('SCHEDULED'),
-    summary: text('summary'), // compte rendu du médecin
+    videoUrl: text('video_url'), // salle de visio, créée pour les consultations en visio
+    summary: text('summary'), // compte rendu du médecin, lisible par la famille
+    missedReason: text('missed_reason'),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [index('consultations_doctor_idx').on(t.doctorId, t.scheduledAt), index('consultations_patient_idx').on(t.patientId)],
+);
+
+// Créneaux hebdomadaires où un médecin ou un infirmier est disponible, en heure du Cameroun (UTC+1, sans heure d'été)
+export const availabilitySlots = pgTable(
+  'availability_slots',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    weekday: integer('weekday').notNull(), // 1 = lundi ... 7 = dimanche
+    startMinute: integer('start_minute').notNull(), // minutes depuis minuit : 540 = 9 h
+    endMinute: integer('end_minute').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('availability_user_idx').on(t.userId)],
+);
+
+// Visites à domicile de l'infirmier(e), formule Sérénité
+export const homeVisits = pgTable(
+  'home_visits',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    patientId: uuid('patient_id')
+      .notNull()
+      .references(() => patients.id, { onDelete: 'cascade' }),
+    nurseId: uuid('nurse_id')
+      .notNull()
+      .references(() => users.id),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
+    durationMinutes: integer('duration_minutes').notNull().default(45),
+    status: consultationStatusEnum('status').notNull().default('SCHEDULED'),
+    treatmentChecked: boolean('treatment_checked'),
+    note: text('note'),
+    missedReason: text('missed_reason'),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('home_visits_nurse_idx').on(t.nurseId, t.scheduledAt), index('home_visits_patient_idx').on(t.patientId)],
+);
+
+// Analyses demandées par le médecin (résultats déposés par le laboratoire au module 5)
+export const labRequests = pgTable('lab_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  patientId: uuid('patient_id')
+    .notNull()
+    .references(() => patients.id, { onDelete: 'cascade' }),
+  consultationId: uuid('consultation_id').references(() => consultations.id, { onDelete: 'set null' }),
+  requestedById: uuid('requested_by_id')
+    .notNull()
+    .references(() => users.id),
+  tests: jsonb('tests').notNull(), // ["HbA1c", "Créatinine"]
+  note: text('note'),
+  status: labStatusEnum('status').notNull().default('REQUESTED'),
+  results: text('results'),
+  resultsAt: timestamp('results_at', { withTimezone: true }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+// Orientation vers un spécialiste ou l'hôpital ; la famille est prévenue
+export const referrals = pgTable('referrals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  patientId: uuid('patient_id')
+    .notNull()
+    .references(() => patients.id, { onDelete: 'cascade' }),
+  consultationId: uuid('consultation_id').references(() => consultations.id, { onDelete: 'set null' }),
+  doctorId: uuid('doctor_id')
+    .notNull()
+    .references(() => users.id),
+  destination: text('destination').notNull(), // "Cardiologue", "Urgences de l'hôpital Laquintinie"...
+  urgency: referralUrgencyEnum('urgency').notNull(),
+  reason: text('reason').notNull(),
+  familyNotifiedAt: timestamp('family_notified_at', { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+// Alerte envoyée au médecin quand un relevé dépasse un seuil
+export const alerts = pgTable(
+  'alerts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    patientId: uuid('patient_id')
+      .notNull()
+      .references(() => patients.id, { onDelete: 'cascade' }),
+    readingId: uuid('reading_id').references(() => readings.id, { onDelete: 'cascade' }),
+    doctorId: uuid('doctor_id').references(() => users.id), // médecin du parent au moment de l'alerte
+    severity: alertSeverityEnum('severity').notNull(),
+    message: text('message').notNull(),
+    acknowledgedAt: timestamp('acknowledged_at', { withTimezone: true }),
+    acknowledgedById: uuid('acknowledged_by_id').references(() => users.id),
+    acknowledgeNote: text('acknowledge_note'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('alerts_doctor_idx').on(t.doctorId, t.acknowledgedAt)],
 );
 
 export const prescriptions = pgTable('prescriptions', {
@@ -337,6 +447,9 @@ export const readings = pgTable(
     value: numeric('value', { precision: 6, scale: 2 }), // glycémie en g/L, poids en kg
     measuredAt: timestamp('measured_at', { withTimezone: true }).notNull(),
     source: readingSourceEnum('source').notNull(),
+    recordedById: uuid('recorded_by_id').references(() => users.id), // infirmier ou médecin qui a mesuré
+    homeVisitId: uuid('home_visit_id'),
+    consultationId: uuid('consultation_id'),
     createdAt: createdAt(),
   },
   (t) => [index('readings_patient_idx').on(t.patientId, t.measuredAt)],
@@ -376,3 +489,6 @@ export type PartnerProfile = typeof partnerProfiles.$inferSelect;
 export type Patient = typeof patients.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
+export type Consultation = typeof consultations.$inferSelect;
+export type HomeVisit = typeof homeVisits.$inferSelect;
+export type Reading = typeof readings.$inferSelect;

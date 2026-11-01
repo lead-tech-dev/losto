@@ -43,6 +43,19 @@ export default function Layout({ children }: { children: ReactNode }) {
                 </NavLink>
               </>
             )}
+            {user.role === 'DOCTOR' && (
+              <>
+                <NavLink to="/" end>Agenda</NavLink>
+                <NavLink to="/medecin/patients">Patients</NavLink>
+                <NavLink to="/disponibilites">Disponibilités</NavLink>
+              </>
+            )}
+            {user.role === 'NURSE' && (
+              <>
+                <NavLink to="/" end>Visites</NavLink>
+                <NavLink to="/disponibilites">Disponibilités</NavLink>
+              </>
+            )}
             {user.role === 'ADMIN' && (
               <>
                 <NavLink to="/admin/comptes">Comptes</NavLink>

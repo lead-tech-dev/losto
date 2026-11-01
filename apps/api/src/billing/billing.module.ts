@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SimulatedTranzak } from './gateways/simulated-tranzak';
+import { CareModule } from '../care/care.module';
 import { CoverageModule } from '../coverage/coverage.module';
 import { PatientsModule } from '../patients/patients.module';
 import { BillingCronService } from './billing-cron.service';
@@ -11,7 +12,7 @@ import { TranzakClient, TranzakGateway } from './gateways/tranzak.client';
 import { StripeEventsService } from './stripe-events.service';
 
 @Module({
-  imports: [PatientsModule, CoverageModule],
+  imports: [PatientsModule, CoverageModule, CareModule],
   controllers: [BillingController, WebhooksController],
   providers: [
     BillingService,

@@ -5,6 +5,10 @@ import { useAuth } from './auth';
 import AcceptInvitation from './pages/AcceptInvitation';
 import AdminMessages from './pages/AdminMessages';
 import AdminUsers from './pages/AdminUsers';
+import AvailabilityPage from './pages/care/AvailabilityPage';
+import DoctorPatientFile from './pages/care/DoctorPatientFile';
+import DoctorPatients from './pages/care/DoctorPatients';
+import NurseVisitPage from './pages/care/NurseVisitPage';
 import ConsentPage from './pages/ConsentPage';
 import Dashboard from './pages/Dashboard';
 import MessagesPage from './pages/family/MessagesPage';
@@ -18,12 +22,13 @@ import ProfilePage from './pages/ProfilePage';
 import Register from './pages/Register';
 
 // Bloque les pages privées : redirige vers la connexion (puis revient ici) si personne n'est connecté.
-function Protected({ children, role }: { children: ReactNode; role?: Role }) {
+function Protected({ children, role, roles }: { children: ReactNode; role?: Role; roles?: Role[] }) {
   const { user, loading } = useAuth();
   const location = useLocation();
   if (loading) return <p className="center muted">Chargement…</p>;
   if (!user) return <Navigate to="/connexion" replace state={{ from: location.pathname + location.search }} />;
   if (role && user.role !== role) return <Navigate to="/" replace />;
+  if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -48,6 +53,12 @@ export default function App() {
       <Route path="/parents/:id/paiement" element={<Protected role="FAMILY"><PaymentPage /></Protected>} />
       <Route path="/paiements" element={<Protected role="FAMILY"><PaymentsPage /></Protected>} />
       <Route path="/messages" element={<Protected role="FAMILY"><MessagesPage /></Protected>} />
+
+      {/* Soignants */}
+      <Route path="/disponibilites" element={<Protected roles={['DOCTOR', 'NURSE']}><AvailabilityPage /></Protected>} />
+      <Route path="/medecin/patients" element={<Protected role="DOCTOR"><DoctorPatients /></Protected>} />
+      <Route path="/medecin/patients/:id" element={<Protected role="DOCTOR"><DoctorPatientFile /></Protected>} />
+      <Route path="/infirmier/visites/:id" element={<Protected role="NURSE"><NurseVisitPage /></Protected>} />
 
       {/* Admin */}
       <Route path="/admin/comptes" element={<Protected role="ADMIN"><AdminUsers /></Protected>} />

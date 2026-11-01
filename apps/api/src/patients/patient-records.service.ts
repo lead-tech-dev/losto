@@ -5,7 +5,10 @@ import { Database, DB } from '../db/db.module';
 import {
   consultations,
   deliveries,
+  homeVisits,
+  labRequests,
   monthlyReports,
+  referrals,
   prescriptions,
   readings,
   ReadingType,
@@ -35,6 +38,8 @@ export class PatientRecordsService {
         id: consultations.id,
         scheduledAt: consultations.scheduledAt,
         mode: consultations.mode,
+        kind: consultations.kind,
+        videoUrl: consultations.videoUrl,
         doctorFirstName: users.firstName,
         doctorLastName: users.lastName,
       })
@@ -44,10 +49,18 @@ export class PatientRecordsService {
         and(
           eq(consultations.patientId, patientId),
           eq(consultations.status, 'SCHEDULED'),
-          gte(consultations.scheduledAt, new Date()),
+          // encore affichée pendant l'heure qui suit le début, le temps de la consultation
+          gte(consultations.scheduledAt, new Date(Date.now() - 60 * 60 * 1000)),
         ),
       )
       .orderBy(asc(consultations.scheduledAt))
+      .limit(1);
+
+    const [nextVisit] = await this.db
+      .select({ id: homeVisits.id, scheduledAt: homeVisits.scheduledAt })
+      .from(homeVisits)
+      .where(and(eq(homeVisits.patientId, patientId), eq(homeVisits.status, 'SCHEDULED'), gte(homeVisits.scheduledAt, new Date())))
+      .orderBy(asc(homeVisits.scheduledAt))
       .limit(1);
 
     // Dernier relevé de chaque type (tension, glycémie, poids)
@@ -88,8 +101,16 @@ export class PatientRecordsService {
 
     return {
       nextConsultation: next
-        ? { id: next.id, scheduledAt: next.scheduledAt, mode: next.mode, doctorName: `Dr ${next.doctorFirstName} ${next.doctorLastName}` }
+        ? {
+            id: next.id,
+            scheduledAt: next.scheduledAt,
+            mode: next.mode,
+            kind: next.kind,
+            videoUrl: next.videoUrl,
+            doctorName: `Dr ${next.doctorFirstName} ${next.doctorLastName}`,
+          }
         : null,
+      nextVisit: nextVisit ?? null,
       latestReadings: latestReadings.filter((r) => r !== null),
       treatment: lastPrescription
         ? { source: 'PRESCRIPTION' as const, items: lastPrescription.items, since: lastPrescription.createdAt }
@@ -124,6 +145,7 @@ export class PatientRecordsService {
         scheduledAt: consultations.scheduledAt,
         mode: consultations.mode,
         status: consultations.status,
+        kind: consultations.kind,
         summary: consultations.summary,
         doctorFirstName: users.firstName,
         doctorLastName: users.lastName,
@@ -132,9 +154,18 @@ export class PatientRecordsService {
       .innerJoin(users, eq(users.id, consultations.doctorId))
       .where(eq(consultations.patientId, patientId))
       .orderBy(desc(consultations.scheduledAt));
+    // Orientations et analyses décidées pendant chaque consultation
+    const refs = await this.db.select().from(referrals).where(eq(referrals.patientId, patientId));
+    const labs = await this.db.select().from(labRequests).where(eq(labRequests.patientId, patientId));
     return rows.map(({ doctorFirstName, doctorLastName, ...c }) => ({
       ...c,
       doctorName: `Dr ${doctorFirstName} ${doctorLastName}`,
+      referrals: refs
+        .filter((r) => r.consultationId === c.id)
+        .map((r) => ({ destination: r.destination, urgency: r.urgency, reason: r.reason })),
+      labRequests: labs
+        .filter((l) => l.consultationId === c.id)
+        .map((l) => ({ tests: l.tests, status: l.status, results: l.results })),
     }));
   }
 

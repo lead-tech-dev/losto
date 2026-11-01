@@ -22,6 +22,13 @@
       "when": 1793524361202,
       "tag": "0002_paiements",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793525864454,
+      "tag": "0003_soins",
+      "breakpoints": true
     }
   ]
 }

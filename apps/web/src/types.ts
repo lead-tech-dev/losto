@@ -49,7 +49,8 @@ export interface PrescriptionItem {
 }
 
 export interface Dashboard {
-  nextConsultation: { id: string; scheduledAt: string; mode: string; doctorName: string } | null;
+  nextConsultation: { id: string; scheduledAt: string; mode: string; kind: string; videoUrl: string | null; doctorName: string } | null;
+  nextVisit: { id: string; scheduledAt: string } | null;
   latestReadings: Reading[];
   treatment:
     | { source: 'PRESCRIPTION'; items: PrescriptionItem[]; since: string }
@@ -63,8 +64,11 @@ export interface Consultation {
   scheduledAt: string;
   mode: string;
   status: string;
+  kind?: string;
   summary: string | null;
   doctorName: string;
+  referrals?: { destination: string; urgency: string; reason: string }[];
+  labRequests?: { tests: string[]; status: string; results: string | null }[];
 }
 
 export interface Report {
@@ -141,3 +145,93 @@ export interface SubscriptionView {
 }
 
 export type CheckoutResult = { kind: 'redirect'; url: string } | { kind: 'mobile'; payment: PaymentView };
+
+// ---------- Portail soignants ----------
+
+export interface ConsultationView {
+  id: string;
+  patientId: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  kind: 'INITIAL' | 'MONTHLY' | 'EXTRA';
+  mode: 'VIDEO' | 'PHONE';
+  status: 'SCHEDULED' | 'DONE' | 'MISSED' | 'CANCELED';
+  videoUrl: string | null;
+  summary: string | null;
+  missedReason: string | null;
+}
+
+export interface AgendaItem extends ConsultationView {
+  patient: { id: string; name: string; phone: string; conditions: string[] };
+}
+
+export interface AlertView {
+  id: string;
+  patientId: string;
+  patientName: string;
+  severity: 'WARNING' | 'URGENT';
+  message: string;
+  createdAt: string;
+}
+
+export interface DoctorPatientRow {
+  id: string;
+  name: string;
+  birthYear: number | null;
+  district: string;
+  city: string;
+  conditions: string[];
+  plan: string | null;
+  subscriptionStatus: string | null;
+  openAlerts: number;
+  nextConsultation: string | null;
+}
+
+export interface PatientFile {
+  patient: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    birthYear: number | null;
+    whatsappPhone: string;
+    hasSmartphone: boolean;
+    city: string;
+    district: string;
+    addressDetails: string | null;
+    conditions: string[];
+    medicalHistory: string | null;
+    currentTreatments: string | null;
+    notes: string | null;
+    plan: string | null;
+    subscriptionStatus: string | null;
+  };
+  consultations: ConsultationView[];
+  prescriptions: { id: string; items: PrescriptionItem[]; status: string; createdAt: string; consultationId: string }[];
+  labRequests: { id: string; tests: string[]; status: string; results: string | null; createdAt: string }[];
+  referrals: { id: string; destination: string; urgency: string; reason: string; createdAt: string }[];
+  homeVisits: { id: string; scheduledAt: string; status: string; note: string | null; treatmentChecked: boolean | null }[];
+  readings: Reading[];
+  openAlerts: (Omit<AlertView, 'patientName'>)[];
+}
+
+export interface Slot {
+  weekday: number;
+  startMinute: number;
+  endMinute: number;
+}
+
+export interface NurseVisit {
+  id: string;
+  patientId: string;
+  scheduledAt: string;
+  status: string;
+  note: string | null;
+  patient: { name: string; phone: string; address: string };
+}
+
+export interface NurseVisitDetail {
+  visit: { id: string; scheduledAt: string; status: string; note: string | null; treatmentChecked: boolean | null };
+  patient: { id: string; name: string; birthYear: number | null; phone: string; address: string; conditions: string[]; notes: string | null };
+  treatment: { items: PrescriptionItem[]; since: string } | { declared: string } | null;
+  recentReadings: { type: string; systolic: number | null; diastolic: number | null; value: number | null; measuredAt: string }[];
+}

@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth';
 import Layout from '../components/Layout';
+import DoctorHome from './care/DoctorHome';
+import NurseHome from './care/NurseHome';
 import FamilyHome from './family/FamilyHome';
 
 // Contenu d'accueil selon le rôle. Chaque espace sera rempli par les modules suivants.
@@ -41,6 +43,8 @@ export default function Dashboard() {
   const { user } = useAuth();
   if (!user) return null;
   if (user.role === 'FAMILY') return <FamilyHome firstName={user.firstName} />;
+  if (user.role === 'DOCTOR') return <DoctorHome firstName={user.lastName} />;
+  if (user.role === 'NURSE') return <NurseHome firstName={user.firstName} />;
   const space = SPACES[user.role];
 
   return (

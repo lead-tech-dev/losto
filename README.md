@@ -22,6 +22,7 @@ docker-compose.yml   PostgreSQL 16 + Redis 7 pour le développement
 | `apps/api/src/patients/` | Espace famille : parents suivis, formule, tableau de bord, relevés, historiques, partage avec les proches, consentement du parent |
 | `apps/api/src/coverage/` | Quartiers desservis à Douala et Yaoundé |
 | `apps/api/src/messages/` | Messagerie entre les familles et l'équipe |
+| `apps/api/src/care/` | Portail médecin et infirmier : disponibilités, affectation et planification automatiques, consultations, ordonnances, analyses, orientations, visites, relevés et alertes |
 | `apps/api/src/billing/` | Paiements : Mobile Money (Tranzak), carte (Stripe), relances, résiliation, médicaments, factures PDF |
 | `apps/api/src/mail/` | Envoi d'e-mails (SMTP, ou console en développement) |
 | `apps/api/src/audit/` | Journal de qui a fait quoi sur les données |
@@ -88,6 +89,23 @@ Le premier paiement inclut l'inscription (30 €). Les médicaments sont payés 
 
 Sans clés, le moyen de paiement correspondant est simplement masqué. Pour essayer sans compte Tranzak : `PAYMENTS_SIMULATION="true"` (paiement validé après 6 s, refusé si le numéro finit par 000 ; interdit en production).
 
+## Soins
+
+**Dès le paiement**, le parent reçoit automatiquement son équipe : le médecin, la pharmacie et (formule Sérénité) l'infirmier(e) de sa ville, vérifiés par l'admin, en choisissant celui qui suit le moins de parents. Le bilan de départ est placé dans le premier créneau libre du médecin, puis une consultation par mois payé (et une visite à domicile en Sérénité). Une tâche quotidienne (7 h, heure du Cameroun) rattrape ce qui n'a pas pu être planifié, par exemple faute de disponibilités.
+
+**Cloisonnement** : un médecin ne voit que les parents qui lui sont affectés ; l'infirmier(e) ne voit que ce qu'il faut pour la visite (pas les antécédents ni les comptes rendus). Toute lecture de dossier est journalisée.
+
+**Visio** : un lien Jitsi impossible à deviner par consultation (`VIDEO_BASE_URL`, par défaut `https://meet.jit.si`). Sur meet.jit.si, la personne qui ouvre la salle doit se connecter avec Google ou GitHub ; un serveur Jitsi hébergé par Proche Santé évite cette étape. Les parents sans smartphone sont appelés.
+
+**Seuils d'alerte** (`apps/api/src/care/thresholds.ts`), valeurs de départ **à faire valider par le médecin référent** :
+
+| Mesure | À surveiller | Urgent |
+|---|---|---|
+| Tension (mmHg) | ≥ 160 / ≥ 100 | ≥ 180 / ≥ 110, ou systolique < 90 |
+| Glycémie (g/L) | < 0,70 ou > 2,50 | < 0,54 ou > 3,00 |
+
+Une valeur urgente mesurée à domicile s'affiche avec la conduite à tenir sur le téléphone de l'infirmier(e) et part par e-mail au médecin. Les valeurs impossibles (diastolique supérieure à la systolique, glycémie saisie en mg/dL) sont refusées.
+
 ## Modifier le schéma
 
 1. Modifie `apps/api/src/db/schema.ts`.
@@ -107,7 +125,7 @@ DATABASE_URL="postgresql://losto:losto@localhost:5432/losto_test" npm test
 - [x] Module 1 : fondations (projet, schéma de données, comptes et rôles)
 - [x] Module 2 : espace famille (inscription du parent, formule, tableau de bord, partage, messagerie)
 - [x] Module 3 : paiements (Mobile Money via Tranzak, carte via Stripe, relances, factures)
-- [ ] Module 4 : portail médecin et infirmier (agenda, téléconsultation, compte rendu, ordonnance)
+- [x] Module 4 : portail médecin et infirmier (agenda, téléconsultation, compte rendu, ordonnance, visites, alertes)
 - [ ] Module 5 : pharmacie et livraison
 - [ ] Module 6 : WhatsApp (rappels, relevés, compte rendu mensuel, assistant)
 - [ ] Module 7 : back-office et indicateurs

@@ -8,6 +8,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BillingModule } from './billing/billing.module';
+import { CareModule } from './care/care.module';
 import { CoverageModule } from './coverage/coverage.module';
 import { DbModule } from './db/db.module';
 import { HealthController } from './health.controller';
@@ -31,6 +32,7 @@ import { UsersModule } from './users/users.module';
     MessagesModule,
     ScheduleModule.forRoot(),
     BillingModule,
+    CareModule,
   ],
   controllers: [HealthController],
   providers: [

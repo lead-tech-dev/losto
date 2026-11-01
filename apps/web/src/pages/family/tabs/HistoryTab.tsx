@@ -1,4 +1,4 @@
-import { CONSULTATION_STATUS, fmtDate, fmtMonth, MODE_LABELS } from '../../../labels';
+import { CONSULTATION_STATUS, fmtDate, fmtMonth, MODE_LABELS, URGENCY_LABELS } from '../../../labels';
 import { Consultation, Report } from '../../../types';
 import { useApi } from '../../../useApi';
 
@@ -32,6 +32,18 @@ export default function HistoryTab({ patientId }: { patientId: string }) {
                 </span>
               </div>
               {c.summary && <p className="pre">{c.summary}</p>}
+              {c.referrals?.map((r, i) => (
+                <p key={i} className={`notice ${r.urgency === 'ROUTINE' ? 'notice-ok' : 'notice-warn'} small`}>
+                  <strong>Orientation : {r.destination}</strong> · {URGENCY_LABELS[r.urgency]}
+                  <br />
+                  {r.reason}
+                </p>
+              ))}
+              {c.labRequests?.map((l, i) => (
+                <p key={i} className="small">
+                  Analyses demandées : {l.tests.join(', ')} · {l.status === 'RESULTS_AVAILABLE' ? 'résultats disponibles' : 'en attente'}
+                </p>
+              ))}
             </li>
           ))}
         </ul>

@@ -72,3 +72,16 @@ export const fmtDateTime = (d: string) => dateTimeFmt.format(new Date(d));
 export const fmtMonth = (d: string) => monthFmt.format(new Date(d));
 export const fmtShort = (d: string) => shortFmt.format(new Date(d));
 export const fmtXaf = (n: number) => `${new Intl.NumberFormat('fr-FR').format(n)} FCFA`;
+
+export const KIND_LABELS: Record<string, string> = { INITIAL: 'Bilan de départ', MONTHLY: 'Consultation mensuelle', EXTRA: 'Consultation supplémentaire' };
+export const URGENCY_LABELS: Record<string, string> = { ROUTINE: 'Sans urgence', URGENT: 'Dans les prochains jours', EMERGENCY: 'En urgence, aujourd’hui' };
+export const WEEKDAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+
+// Affichage en heure du Cameroun, quel que soit le fuseau de l'appareil
+const doualaTime = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Douala' });
+const doualaDay = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Douala' });
+const doualaDayKey = new Intl.DateTimeFormat('fr-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Africa/Douala' });
+export const fmtTimeCm = (d: string) => doualaTime.format(new Date(d));
+export const fmtDayCm = (d: string) => doualaDay.format(new Date(d));
+export const dayKeyCm = (d: string | Date) => doualaDayKey.format(new Date(d));
+export const fmtSlotCm = (d: string) => `${fmtDayCm(d)} à ${fmtTimeCm(d)}`;

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { AuditService } from '../audit/audit.service';
+import { SchedulingService } from '../care/scheduling.service';
 import { appUrl } from '../common/app-url';
 import { CoverageService } from '../coverage/coverage.service';
 import { Database, DB } from '../db/db.module';
@@ -56,6 +57,7 @@ export class BillingService {
     private readonly tranzak: TranzakGateway,
     private readonly mailer: MailerService,
     private readonly audit: AuditService,
+    private readonly scheduling: SchedulingService,
   ) {}
 
   // ================= Lecture =================
@@ -452,6 +454,12 @@ export class BillingService {
     if (result?.duplicate) {
       this.logger.warn(`Paiement ${result.id} en double pour l'ordonnance ${result.prescriptionId} : à rembourser`);
       await this.audit.log(result.payerId, 'billing.duplicate', 'Payment', result.id);
+    }
+    if (result?.kind === 'SUBSCRIPTION') {
+      // Suivi actif : équipe soignante affectée et consultation du mois planifiée tout de suite
+      await this.scheduling
+        .ensureForPatient(result.patientId)
+        .catch((e) => this.logger.error(`Planification après paiement : ${e.message}`));
     }
     if (result) {
       await this.audit.log(result.payerId, 'billing.paid', 'Payment', result.id);
