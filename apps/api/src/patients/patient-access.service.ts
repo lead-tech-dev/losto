@@ -14,7 +14,7 @@ export class PatientAccessService {
   // (et non "interdit"), pour ne pas révéler qu'un dossier existe.
   async resolve(userId: string, patientId: string): Promise<{ patient: Patient; role: PatientRole }> {
     const [patient] = await this.db.select().from(patients).where(eq(patients.id, patientId)).limit(1);
-    if (!patient) throw new NotFoundException('Parent introuvable');
+    if (!patient || patient.erasedAt) throw new NotFoundException('Parent introuvable');
     if (patient.familyUserId === userId) return { patient, role: 'OWNER' };
 
     const [member] = await this.db

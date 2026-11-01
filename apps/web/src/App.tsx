@@ -6,6 +6,8 @@ import AcceptInvitation from './pages/AcceptInvitation';
 import AdminMessages from './pages/AdminMessages';
 import AdminReports from './pages/AdminReports';
 import AdminWhatsApp from './pages/AdminWhatsApp';
+import Landing from './pages/public/Landing';
+import { Cgu, Confidentialite, MentionsLegales } from './pages/public/Legal';
 import AdminAudit from './pages/admin/AdminAudit';
 import AdminMetrics from './pages/admin/AdminMetrics';
 import AdminPatients from './pages/admin/AdminPatients';
@@ -41,6 +43,13 @@ function Protected({ children, role, roles }: { children: ReactNode; role?: Role
   return <>{children}</>;
 }
 
+// Accueil : la page de vente pour un visiteur, le tableau de bord une fois connecté
+function Home() {
+  const { user, loading } = useAuth();
+  if (loading) return <p className="center muted">Chargement…</p>;
+  return user ? <Dashboard /> : <Landing />;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -53,7 +62,10 @@ export default function App() {
       {/* L'invitation gère elle-même le passage par la connexion */}
       <Route path="/invitation" element={<AcceptInvitation />} />
 
-      <Route path="/" element={<Protected><Dashboard /></Protected>} />
+      <Route path="/" element={<Home />} />
+      <Route path="/cgu" element={<Cgu />} />
+      <Route path="/confidentialite" element={<Confidentialite />} />
+      <Route path="/mentions-legales" element={<MentionsLegales />} />
       <Route path="/profil" element={<Protected><ProfilePage /></Protected>} />
 
       {/* Espace famille */}

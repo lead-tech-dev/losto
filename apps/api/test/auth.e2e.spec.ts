@@ -58,7 +58,7 @@ describe('Authentification et rôles', () => {
   it("inscrit une famille et ne renvoie jamais le hash du mot de passe", async () => {
     const res = await http()
       .post('/api/auth/register')
-      .send({ email: 'Aminata@Exemple.fr', password: 'MotDePasse1', firstName: 'Aminata', lastName: 'K.' })
+      .send({ email: 'Aminata@Exemple.fr', password: 'MotDePasse1', firstName: 'Aminata', lastName: 'K.', acceptTerms: true })
       .expect(201);
     expect(res.body.accessToken).toBeDefined();
     expect(res.body.user.role).toBe('FAMILY');
@@ -69,17 +69,28 @@ describe('Authentification et rôles', () => {
     expect(me.body.firstName).toBe('Aminata');
   });
 
+  it("exige l'acceptation des conditions générales", async () => {
+    await http()
+      .post('/api/auth/register')
+      .send({ email: 'sans-cgu@exemple.fr', password: 'MotDePasse1', firstName: 'S', lastName: 'C' })
+      .expect(400);
+    await http()
+      .post('/api/auth/register')
+      .send({ email: 'sans-cgu@exemple.fr', password: 'MotDePasse1', firstName: 'S', lastName: 'C', acceptTerms: false })
+      .expect(400);
+  });
+
   it("refuse une deuxième inscription avec la même adresse", async () => {
     await http()
       .post('/api/auth/register')
-      .send({ email: 'aminata@exemple.fr', password: 'MotDePasse1', firstName: 'A', lastName: 'K' })
+      .send({ email: 'aminata@exemple.fr', password: 'MotDePasse1', firstName: 'A', lastName: 'K', acceptTerms: true })
       .expect(409);
   });
 
   it("refuse les champs inconnus (impossible de s'inscrire en se donnant le rôle admin)", async () => {
     await http()
       .post('/api/auth/register')
-      .send({ email: 'pirate@exemple.fr', password: 'MotDePasse1', firstName: 'P', lastName: 'X', role: 'ADMIN' })
+      .send({ email: 'pirate@exemple.fr', password: 'MotDePasse1', firstName: 'P', lastName: 'X', role: 'ADMIN', acceptTerms: true })
       .expect(400);
   });
 

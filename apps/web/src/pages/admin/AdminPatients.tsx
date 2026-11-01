@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../api';
 import Layout from '../../components/Layout';
+import PrivacyPanel from '../../components/PrivacyPanel';
 import { CITY_LABELS, CONDITION_LABELS, fmtDate, fmtSlotCm, PLAN_LABELS, SUBSCRIPTION_STATUS } from '../../labels';
 import { useApi } from '../../useApi';
 
@@ -119,7 +120,14 @@ export default function AdminPatients() {
                 )}
               </div>
             </div>
-            {open === r.id && <TeamEditor row={r} onSaved={reload} />}
+            {open === r.id && (
+              <>
+                <TeamEditor row={r} onSaved={reload} />
+                <div className="team-editor">
+                  <PrivacyPanel base={`/admin/patients/${r.id}`} firstName={r.name.split(' ')[0]} onErased={reload} />
+                </div>
+              </>
+            )}
           </article>
         ))}
       </div>

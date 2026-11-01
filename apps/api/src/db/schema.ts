@@ -15,6 +15,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
+import { encryptedText } from './crypto';
 
 // ---------- Types énumérés ----------
 
@@ -96,6 +97,9 @@ export const users = pgTable('users', {
   phone: text('phone'),
   // Famille : reçoit aussi les notifications sur WhatsApp (en plus de l'e-mail)
   whatsappNotifications: boolean('whatsapp_notifications').notNull().default(true),
+  // Conditions générales acceptées (famille) : date et version du texte
+  termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
+  termsVersion: text('terms_version'),
   isActive: boolean('is_active').notNull().default(true),
   stripeCustomerId: text('stripe_customer_id').unique(),
   createdAt: createdAt(),
@@ -134,9 +138,9 @@ export const patients = pgTable(
     district: text('district').notNull(), // quartier, pour la livraison
     addressDetails: text('address_details'),
     conditions: conditionEnum('conditions').array().notNull().default(sql`'{}'`),
-    medicalHistory: text('medical_history'), // antécédents
-    currentTreatments: text('current_treatments'), // traitements déclarés à l'inscription
-    notes: text('notes'),
+    medicalHistory: encryptedText('medical_history'), // antécédents (chiffré)
+    currentTreatments: encryptedText('current_treatments'), // traitements déclarés à l'inscription (chiffré)
+    notes: encryptedText('notes'), // chiffré
     // Équipe soignante, affectée automatiquement à l'activation (modifiable par l'admin)
     doctorId: uuid('doctor_id').references(() => users.id),
     nurseId: uuid('nurse_id').references(() => users.id),
@@ -147,6 +151,8 @@ export const patients = pgTable(
     consentGivenAt: timestamp('consent_given_at', { withTimezone: true }),
     // Le parent a répondu STOP : plus aucun message automatique (il peut répondre REPRENDRE)
     whatsappOptOutAt: timestamp('whatsapp_opt_out_at', { withTimezone: true }),
+    // Données effacées à la demande (droit à l'effacement) : il ne reste que ce que la loi impose de garder (factures)
+    erasedAt: timestamp('erased_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -316,7 +322,7 @@ export const consultations = pgTable(
     mode: consultationModeEnum('mode').notNull().default('PHONE'),
     status: consultationStatusEnum('status').notNull().default('SCHEDULED'),
     videoUrl: text('video_url'), // salle de visio, créée pour les consultations en visio
-    summary: text('summary'), // compte rendu du médecin, lisible par la famille
+    summary: encryptedText('summary'), // compte rendu du médecin, lisible par la famille (chiffré)
     missedReason: text('missed_reason'),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     createdAt: createdAt(),
@@ -356,7 +362,7 @@ export const homeVisits = pgTable(
     durationMinutes: integer('duration_minutes').notNull().default(45),
     status: consultationStatusEnum('status').notNull().default('SCHEDULED'),
     treatmentChecked: boolean('treatment_checked'),
-    note: text('note'),
+    note: encryptedText('note'), // chiffré
     missedReason: text('missed_reason'),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     createdAt: createdAt(),
@@ -385,8 +391,8 @@ export const labRequests = pgTable('lab_requests', {
   resultsAbnormal: boolean('results_abnormal'),
   // Résultats visibles par la famille seulement une fois lus et commentés par le médecin
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
-  doctorComment: text('doctor_comment'),
-  results: text('results'),
+  doctorComment: encryptedText('doctor_comment'), // chiffré
+  results: encryptedText('results'), // chiffré
   resultsAt: timestamp('results_at', { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -404,7 +410,7 @@ export const referrals = pgTable('referrals', {
     .references(() => users.id),
   destination: text('destination').notNull(), // "Cardiologue", "Urgences de l'hôpital Laquintinie"...
   urgency: referralUrgencyEnum('urgency').notNull(),
-  reason: text('reason').notNull(),
+  reason: encryptedText('reason').notNull(), // chiffré
   familyNotifiedAt: timestamp('family_notified_at', { withTimezone: true }),
   createdAt: createdAt(),
 });
@@ -497,7 +503,7 @@ export const monthlyReports = pgTable(
       .notNull()
       .references(() => patients.id, { onDelete: 'cascade' }),
     month: timestamp('month', { withTimezone: true }).notNull(), // 1er jour du mois concerné
-    content: text('content').notNull(),
+    content: encryptedText('content').notNull(), // chiffré
     // Brouillon généré automatiquement, relu (et corrigé) par l'équipe avant l'envoi à la famille
     reviewedById: uuid('reviewed_by_id').references(() => users.id),
     sentAt: timestamp('sent_at', { withTimezone: true }),
@@ -543,7 +549,7 @@ export const whatsappMessages = pgTable(
     // welcome, med_reminder, appt_reminder, reading_ack, emergency, assistant, handoff, staff_reply, family_notice, delivery_code…
     kind: text('kind').notNull(),
     template: text('template'), // modèle Meta utilisé (fenêtre de 24 h fermée)
-    body: text('body').notNull(),
+    body: encryptedText('body').notNull(), // chiffré : les parents y décrivent leurs symptômes
     waId: text('wa_id').unique(), // identifiant du message chez Meta
     status: waStatusEnum('status').notNull(),
     error: text('error'),

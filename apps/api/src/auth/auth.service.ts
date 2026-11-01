@@ -7,6 +7,7 @@ import { Database, DB } from '../db/db.module';
 import { Role, User, users } from '../db/schema';
 import { LoginDto } from './dto/login.dto';
 import { RegisterFamilyDto } from './dto/register-family.dto';
+import { TERMS_VERSION } from '../legal/legal.controller';
 
 export const BCRYPT_ROUNDS = 12;
 
@@ -47,6 +48,8 @@ export class AuthService {
         firstName: dto.firstName.trim(),
         lastName: dto.lastName.trim(),
         phone: dto.phone?.trim(),
+        termsAcceptedAt: new Date(),
+        termsVersion: TERMS_VERSION,
       })
       .returning();
     await this.audit.log(user.id, 'user.register', 'User', user.id);

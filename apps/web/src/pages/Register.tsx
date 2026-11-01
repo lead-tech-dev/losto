@@ -8,6 +8,7 @@ export default function Register() {
   // Après une invitation, on revient sur la page de l'invitation une fois le compte créé
   const from = (useLocation().state as { from?: string } | null)?.from;
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '' });
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -23,7 +24,7 @@ export default function Register() {
     }
     setBusy(true);
     try {
-      await register({ ...form, phone: form.phone || undefined });
+      await register({ ...form, phone: form.phone || undefined, acceptTerms });
       navigate(from ?? '/parents/nouveau', { replace: true });
     } catch (err) {
       setError((err as Error).message);
@@ -59,8 +60,15 @@ export default function Register() {
           Mot de passe (8 caractères minimum)
           <input type="password" required value={form.password} onChange={set('password')} autoComplete="new-password" />
         </label>
+        <label className={`check ${acceptTerms ? 'on' : ''}`}>
+          <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} required />
+          <span>
+            J’accepte les <Link to="/cgu" target="_blank">conditions générales</Link> et la{' '}
+            <Link to="/confidentialite" target="_blank">politique de confidentialité</Link>
+          </span>
+        </label>
         {error && <p className="error" role="alert">{error}</p>}
-        <button type="submit" className="btn" disabled={busy}>
+        <button type="submit" className="btn" disabled={busy || !acceptTerms}>
           {busy ? 'Création…' : 'Créer mon compte'}
         </button>
         <p className="muted small">

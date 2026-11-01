@@ -4,9 +4,11 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { configureApp } from './app.setup';
 import { checkProductionEnv } from './common/env-check';
+import { initMonitoring } from './common/monitoring';
 
 async function bootstrap() {
   // rawBody : le corps brut est nécessaire pour vérifier la signature des notifications Stripe
+  initMonitoring();
   const { errors, warnings } = checkProductionEnv();
   warnings.forEach((w) => console.warn(`⚠ ${w}`));
   if (errors.length) {

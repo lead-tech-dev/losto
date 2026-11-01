@@ -230,7 +230,7 @@ export class BackofficeService {
     const owner = alias(users, 'owner');
     const pharma = alias(partnerProfiles, 'pharma');
     const lab = alias(partnerProfiles, 'labp');
-    const where: SQL[] = [];
+    const where: SQL[] = [isNull(patients.erasedAt)];
     if (q.city && (CITIES as readonly string[]).includes(q.city)) where.push(eq(patients.city, q.city as City));
     if (q.status === 'NONE') where.push(isNull(subscriptions.id));
     else if (q.status) where.push(eq(subscriptions.status, q.status as never));

@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { ErrorReporter, ErrorsFilter } from './common/monitoring';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuditModule } from './audit/audit.module';
 import { BackofficeModule } from './backoffice/backoffice.module';
+import { PrivacyModule } from './privacy/privacy.module';
+import { LegalModule } from './legal/legal.controller';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -41,6 +44,8 @@ import { WhatsAppModule } from './whatsapp/whatsapp.module';
     LogisticsModule,
     WhatsAppModule,
     BackofficeModule,
+    PrivacyModule,
+    LegalModule,
   ],
   controllers: [HealthController],
   providers: [
@@ -48,6 +53,8 @@ import { WhatsAppModule } from './whatsapp/whatsapp.module';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    ErrorReporter,
+    { provide: APP_FILTER, useClass: ErrorsFilter },
   ],
 })
 export class AppModule {}

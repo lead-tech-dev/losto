@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom';
+import PrivacyPanel from '../../../components/PrivacyPanel';
 import { useState } from 'react';
 import { api } from '../../../api';
 import PatientForm, { PatientFormValues, toPayload } from '../../../components/PatientForm';
@@ -26,6 +28,7 @@ const toForm = (p: PatientDetail): PatientFormValues => ({
 
 export default function DossierTab({ patient, onSaved }: Props) {
   const [saved, setSaved] = useState(false);
+  const navigate = useNavigate();
 
   // Un proche invité voit le dossier en lecture seule
   if (patient.role === 'MEMBER') return <ReadOnlyDossier p={patient} />;
@@ -47,6 +50,7 @@ export default function DossierTab({ patient, onSaved }: Props) {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
       />
+      <PrivacyPanel base={`/patients/${patient.id}`} firstName={patient.firstName} onErased={() => navigate('/', { replace: true, state: { erased: patient.firstName } })} />
     </div>
   );
 }

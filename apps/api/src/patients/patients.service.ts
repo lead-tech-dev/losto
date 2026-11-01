@@ -1,6 +1,6 @@
 import { WhatsAppService } from '../whatsapp/whatsapp.service';
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { AuditService } from '../audit/audit.service';
 import { appUrl } from '../common/app-url';
 import { normalizeCameroonPhone } from '../common/text';
@@ -64,7 +64,7 @@ export class PatientsService {
       .where(eq(patientMembers.userId, userId));
     const memberIds = new Set(memberRows.map((r) => r.patientId));
 
-    const owned = await this.db.select().from(patients).where(eq(patients.familyUserId, userId)).orderBy(asc(patients.createdAt));
+    const owned = await this.db.select().from(patients).where(and(eq(patients.familyUserId, userId), isNull(patients.erasedAt))).orderBy(asc(patients.createdAt));
     const shared = memberIds.size
       ? await this.db.select().from(patients).where(inArray(patients.id, [...memberIds])).orderBy(asc(patients.createdAt))
       : [];

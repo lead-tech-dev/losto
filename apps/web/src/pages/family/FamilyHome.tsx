@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { CITY_LABELS, CONDITION_LABELS, PLAN_LABELS, SUBSCRIPTION_STATUS } from '../../labels';
 import { PatientSummary } from '../../types';
@@ -6,6 +6,7 @@ import { useApi } from '../../useApi';
 
 export default function FamilyHome({ firstName }: { firstName: string }) {
   const { data: patients, error, loading } = useApi<PatientSummary[]>('/patients');
+  const erased = (useLocation().state as { erased?: string } | null)?.erased;
 
   return (
     <Layout>
@@ -15,6 +16,7 @@ export default function FamilyHome({ firstName }: { firstName: string }) {
           Inscrire un parent
         </Link>
       </div>
+      {erased && <div className="notice notice-ok">Les données de {erased} ont été effacées. Une confirmation vous a été envoyée par e-mail.</div>}
       {error && <p className="error">{error}</p>}
       {loading && <p className="muted">Chargement…</p>}
 

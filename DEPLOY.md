@@ -40,6 +40,8 @@ Même principe que Lemaket : tout est gratuit tant que le test dure, et le passa
 1. Sur render.com : **New → Blueprint**, choisir le dépôt `lead-tech-dev/losto`. Render lit `render.yaml`.
 2. Renseigner les valeurs demandées :
    - `DATABASE_URL` : celle de Neon ;
+   - `DATA_ENCRYPTION_KEY` : générée avec `openssl rand -base64 32`. **À recopier aussi dans un gestionnaire de mots de passe** : sans cette clé, antécédents, comptes rendus, résultats et messages chiffrés sont définitivement illisibles ;
+   - `LEGAL_CONTACT_EMAIL`, `LEGAL_DPO_EMAIL`, `LEGAL_DIRECTOR`, `INVOICE_ISSUER_DETAILS` (« adresse | RCCM … | NIU … ») : affichés dans les mentions légales, la politique de confidentialité et les factures ;
    - `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` (12 caractères minimum) : le premier compte admin, créé au premier démarrage ;
    - `SMTP_*`, `MAIL_FROM` : un compte Brevo gratuit suffit (300 e-mails par jour) ;
    - `TRANZAK_*`, `WHATSAPP_*`, `INVOICE_ISSUER_DETAILS` : dès qu'ils sont disponibles (l'API démarre sans, et le signale dans ses journaux).
@@ -60,7 +62,12 @@ Si le nom `proche-sante-api` est déjà pris chez Render, l'adresse change : la 
 | Portail Tranzak | Notification `REQUEST.COMPLETED` → `https://proche-sante-api.onrender.com/api/webhooks/tranzak`, avec la clé `TRANZAK_WEBHOOK_AUTH_KEY` |
 | Gestionnaire WhatsApp de Meta | Webhook → `https://proche-sante-api.onrender.com/api/webhooks/whatsapp`, jeton = `WHATSAPP_VERIFY_TOKEN` (généré par Render, visible dans Environment), abonnement `messages` ; soumettre les 5 modèles (page WhatsApp du back-office) |
 
-## 5. Après la mise en ligne
+## 5. Surveillance
+
+- **Erreurs** : chaque erreur 500 est envoyée par e-mail aux comptes admin (une fois par heure et par type d'erreur). Avec `SENTRY_DSN` (sentry.io, offre gratuite), elles arrivent aussi dans Sentry, **sans corps de requête ni en-têtes** : aucune donnée de santé ne sort.
+- **Disponibilité** : créer une sonde gratuite sur UptimeRobot (ou Better Stack) sur `https://proche-sante-api.onrender.com/api/health`, toutes les 5 minutes, alerte par e-mail et SMS. Cette adresse ne touche pas la base de données.
+
+## 6. Après la mise en ligne
 
 - Se connecter avec le compte admin, **changer son mot de passe**, puis supprimer `SEED_ADMIN_PASSWORD` sur Render.
 - Créer les comptes des partenaires (médecin, pharmacie…) et vérifier leurs documents.
@@ -68,7 +75,7 @@ Si le nom `proche-sante-api` est déjà pris chez Render, l'adresse change : la 
 
 ## Données de santé
 
-Les données sont hébergées dans l'Union européenne (Francfort), chiffrées au repos et en transit. La loi camerounaise n° 2024/017 n'impose pas de les garder au Cameroun mais demande des garanties pour tout transfert : la page de consentement du parent l'indique, et l'hébergement européen relève du RGPD. Points restant à traiter avec la mise en production complète : registre des traitements, désignation d'un DPO, pages légales, procédure en cas de fuite.
+Les données sont hébergées dans l'Union européenne (Francfort), chiffrées au repos et en transit, et les champs de santé (antécédents, traitements, comptes rendus, notes de visite, résultats d'analyses, orientations, messages WhatsApp) sont en plus chiffrés par l'application (AES-256-GCM, `DATA_ENCRYPTION_KEY`). Les ordonnances (liste de médicaments) et les relevés chiffrés (tension, glycémie) restent en clair pour les calculs et les courbes. La loi camerounaise n° 2024/017 n'impose pas de les garder au Cameroun mais demande des garanties pour tout transfert : la page de consentement du parent l'indique, et l'hébergement européen relève du RGPD. Déjà en place : consentement du parent, pages légales (`/cgu`, `/confidentialite`, `/mentions-legales`, CGU acceptées et datées à l'inscription), copie et effacement des données par la famille ou l'équipe, journal des accès. À faire hors code : tenir le registre des traitements, désigner le responsable des données (DPO), faire relire les pages légales par un juriste.
 
 ## Passage sur un VPS (IONOS)
 

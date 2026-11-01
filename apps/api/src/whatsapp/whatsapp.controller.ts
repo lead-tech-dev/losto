@@ -30,6 +30,7 @@ import { Database, DB } from '../db/db.module';
 import { patients, Role, users, whatsappMessages } from '../db/schema';
 import { PatientAccessService } from '../patients/patient-access.service';
 import { WhatsAppInboundService } from './inbound.service';
+import { decrypt } from '../db/crypto';
 import { waPhone } from './phone';
 import { previousMonth, ReportsService } from './reports.service';
 import { TEMPLATES } from './templates';
@@ -221,7 +222,7 @@ export class AdminWhatsAppController {
     return rows.rows.map((r) => ({
       phone: r.phone,
       lastAt: r.last_at,
-      lastBody: r.last_body,
+      lastBody: decrypt(r.last_body),
       lastDirection: r.last_direction,
       pending: Number(r.pending),
       names: r.names,

@@ -168,6 +168,8 @@ Sous-menu réservé au rôle `ADMIN` :
 
 ## Mise en ligne
 
+Page d'accueil publique (page de vente avec vérification du quartier), pages légales (`/cgu`, `/confidentialite`, `/mentions-legales`).
+
 Phase de test sur des offres gratuites : site sur **Vercel**, API sur **Render**, base **Neon** (Francfort). Pas à pas dans [DEPLOY.md](DEPLOY.md). L'API applique les migrations et crée le premier admin à chaque démarrage (`npm run start:prod`), et refuse de démarrer en production avec une configuration dangereuse (`apps/api/src/common/env-check.ts`).
 
 ## Modifier le schéma
@@ -193,4 +195,4 @@ DATABASE_URL="postgresql://losto:losto@localhost:5432/losto_test" npm test
 - [x] Module 5 : pharmacie, laboratoire et livraison (prix, paiement, préparation, livraison contre code, prises de sang, résultats relus par le médecin)
 - [x] Module 6 : WhatsApp (relevés par message, urgences, rappels, code de livraison, comptes rendus mensuels, assistant)
 - [x] Module 7 : back-office et indicateurs (tableau de bord, retards, parents et équipes, paiements et remboursements, relevés partenaires, indicateurs, journal, zones)
-- [ ] Module 8 : mise en production (fait : déploiement gratuit Vercel + Render + Neon, contrôles de démarrage, intégration continue ; reste : pages légales, chiffrement des champs sensibles, export et effacement des données, surveillance, VPS)
+- [x] Module 8 : mise en production (déploiement gratuit Vercel + Render + Neon, chiffrement des données de santé, copie et effacement des données, pages légales et page de vente, surveillance des erreurs, intégration continue). Plus tard : VPS IONOS

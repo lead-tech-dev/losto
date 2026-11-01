@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { Equals, IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class RegisterFamilyDto {
   @IsEmail({}, { message: 'Adresse e-mail invalide' })
@@ -22,4 +22,8 @@ export class RegisterFamilyDto {
   @IsOptional()
   @Matches(/^\+?[0-9 ]{8,20}$/, { message: 'Numéro de téléphone invalide' })
   phone?: string;
+
+  // Conditions générales et politique de confidentialité acceptées (case cochée à l'inscription)
+  @Equals(true, { message: 'Acceptez les conditions générales et la politique de confidentialité' })
+  acceptTerms: boolean;
 }

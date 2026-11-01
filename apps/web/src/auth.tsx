@@ -7,6 +7,7 @@ interface RegisterInput {
   firstName: string;
   lastName: string;
   phone?: string;
+  acceptTerms: boolean;
 }
 
 interface AuthContextValue {

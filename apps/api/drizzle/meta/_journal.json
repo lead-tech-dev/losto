@@ -57,6 +57,20 @@
       "when": 1793541774642,
       "tag": "0007_backoffice",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793546441626,
+      "tag": "0008_effacement",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793546594688,
+      "tag": "0009_cgu",
+      "breakpoints": true
     }
   ]
 }

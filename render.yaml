@@ -20,6 +20,10 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
+      # Clé de chiffrement des données de santé : 32 octets en base64 (openssl rand -base64 32).
+      # À CONSERVER précieusement (gestionnaire de mots de passe) : sans elle, les données chiffrées sont perdues.
+      - key: DATA_ENCRYPTION_KEY
+        sync: false
       - key: JWT_EXPIRES_IN
         value: 7d
       # Adresse du site (Vercel) : liens des e-mails et WhatsApp, CORS
@@ -72,3 +76,13 @@ services:
         generateValue: true
       - key: VIDEO_BASE_URL
         value: https://meet.jit.si
+      # Pages légales (mentions, confidentialité, CGU) : contact et responsable des données
+      - key: LEGAL_CONTACT_EMAIL
+        sync: false
+      - key: LEGAL_DPO_EMAIL
+        sync: false
+      - key: LEGAL_DIRECTOR
+        sync: false
+      # Surveillance des erreurs (facultatif) : sentry.io, offre gratuite
+      - key: SENTRY_DSN
+        sync: false
