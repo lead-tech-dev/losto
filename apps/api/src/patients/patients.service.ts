@@ -1,4 +1,4 @@
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { asc, eq, inArray } from 'drizzle-orm';
 import { AuditService } from '../audit/audit.service';
 import { appUrl } from '../common/app-url';
@@ -7,7 +7,7 @@ import { randomToken } from '../common/tokens';
 import { CoverageService } from '../coverage/coverage.service';
 import { Database, DB } from '../db/db.module';
 import { Patient, patientMembers, patients, Plan, subscriptions } from '../db/schema';
-import { ChangePlanDto, CreatePatientDto, UpdatePatientDto } from './dto/patient.dto';
+import { CreatePatientDto, UpdatePatientDto } from './dto/patient.dto';
 import { PatientAccessService, PatientRole } from './patient-access.service';
 import { PLAN_PRICES_EUR } from './plans';
 
@@ -113,18 +113,6 @@ export class PatientsService {
       })
       .where(eq(patients.id, patientId));
     await this.audit.log(userId, 'patient.update', 'Patient', patientId);
-    return this.detail(userId, patientId);
-  }
-
-  async changePlan(userId: string, patientId: string, dto: ChangePlanDto) {
-    await this.access.requireOwner(userId, patientId);
-    const [sub] = await this.db.select().from(subscriptions).where(eq(subscriptions.patientId, patientId)).limit(1);
-    if (sub && sub.status !== 'PENDING') {
-      // Un abonnement déjà payé change de formule via les paiements (module 3), pour gérer le prorata.
-      throw new ConflictException('La formule d’un abonnement actif se change depuis la page Paiements');
-    }
-    await this.db.update(subscriptions).set({ plan: dto.plan }).where(eq(subscriptions.patientId, patientId));
-    await this.audit.log(userId, 'patient.plan', 'Patient', patientId);
     return this.detail(userId, patientId);
   }
 

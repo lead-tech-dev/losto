@@ -37,6 +37,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <NavLink to="/" end>
                   Mes parents
                 </NavLink>
+                <NavLink to="/paiements">Paiements</NavLink>
                 <NavLink to="/messages">
                   Messages {unread > 0 && <span className="badge badge-alert">{unread}</span>}
                 </NavLink>

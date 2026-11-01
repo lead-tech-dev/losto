@@ -197,3 +197,33 @@ label.plan ul { margin: 8px 0 0; padding-left: 18px; font-size: 14px; display: f
   .plan-box { align-items: flex-start; }
   .bubble { max-width: 92%; }
 }
+
+/* ---------- Module 3 : paiements ---------- */
+button.plan-box { font: inherit; text-align: right; cursor: pointer; color: inherit; }
+button.plan-box:hover { border-color: var(--green); }
+.notice-action { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; background: #fff; border: 2px solid var(--green); }
+.card-accent { border: 2px solid var(--green); }
+.btn-danger { background: var(--danger); }
+.btn-danger:hover { background: #7f2222; }
+.stack-sm { display: flex; flex-direction: column; gap: 14px; }
+.hint { font-weight: 400; }
+.pay-layout { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.pay-layout > .card:first-child { flex: 1 1 420px; min-width: 0; }
+.pay-layout > .summary { flex: 0 1 320px; min-width: 0; }
+.summary .total { border-bottom: none; font-weight: 600; }
+.summary .total dd { text-align: right; }
+.summary ul { margin-top: 4px; }
+.pay-methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+label.pay-method { position: relative; border: 1px solid #d6d3c8; border-radius: 14px; padding: 16px; cursor: pointer; gap: 2px; font-weight: 400; }
+label.pay-method.on { border: 2px solid var(--green); background: #f3f8f5; padding: 15px; }
+label.pay-method input { position: absolute; opacity: 0; pointer-events: none; }
+label.pay-method:has(input:focus-visible) { outline: 2px solid var(--green); outline-offset: 2px; }
+.pay-method-name { font-weight: 700; }
+.pay-method-amount { font-size: 22px; font-weight: 700; }
+.pay-wait { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 0; }
+.pay-wait p { margin: 0; max-width: 440px; }
+.pay-done { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.pay-done p, .pay-done h2 { margin: 0; }
+.spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid var(--green-soft); border-top-color: var(--green); }
+@media (prefers-reduced-motion: no-preference) { .spinner { animation: spin 1s linear infinite; } }
+@keyframes spin { to { transform: rotate(360deg); } }

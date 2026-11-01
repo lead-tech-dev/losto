@@ -106,10 +106,6 @@ export class UpdatePatientDto {
   @IsOptional() @IsString() @MaxLength(2000) notes?: string;
 }
 
-export class ChangePlanDto {
-  @IsIn(PLANS, { message: 'Formule inconnue' })
-  plan: Plan;
-}
 
 export class InviteDto {
   @IsEmail({}, { message: 'Adresse e-mail invalide' })

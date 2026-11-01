@@ -32,6 +32,7 @@ export const SUBSCRIPTION_STATUS: Record<string, { label: string; tone: 'ok' | '
   PENDING: { label: 'En attente de paiement', tone: 'warn' },
   ACTIVE: { label: 'Actif', tone: 'ok' },
   PAST_DUE: { label: 'Paiement en retard', tone: 'warn' },
+  SUSPENDED: { label: 'Suspendu (impayé)', tone: 'warn' },
   CANCELED: { label: 'Résilié', tone: 'muted' },
 };
 
@@ -46,6 +47,7 @@ export const MODE_LABELS: Record<string, string> = { VIDEO: 'Visio', PHONE: 'Té
 
 export const PRESCRIPTION_STATUS: Record<string, string> = {
   SENT: 'Envoyée à la pharmacie',
+  AWAITING_PAYMENT: 'Prix à valider',
   PREPARING: 'En préparation',
   READY: 'Prête',
   DELIVERED: 'Livrée',

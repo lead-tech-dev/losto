@@ -8,6 +8,7 @@ import {
   jsonb,
   numeric,
   pgEnum,
+  pgSequence,
   pgTable,
   text,
   timestamp,
@@ -36,10 +37,31 @@ export type ReadingType = (typeof READING_TYPES)[number];
 
 export const conditionEnum = pgEnum('condition', CONDITIONS);
 export const planEnum = pgEnum('plan', PLANS);
-export const subscriptionStatusEnum = pgEnum('subscription_status', ['PENDING', 'ACTIVE', 'PAST_DUE', 'CANCELED']);
+// SUSPENDED = impayé après les relances : le suivi est arrêté jusqu'à régularisation
+export const SUBSCRIPTION_STATUSES = ['PENDING', 'ACTIVE', 'PAST_DUE', 'SUSPENDED', 'CANCELED'] as const;
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
+export const subscriptionStatusEnum = pgEnum('subscription_status', SUBSCRIPTION_STATUSES);
 export const consultationModeEnum = pgEnum('consultation_mode', ['VIDEO', 'PHONE']);
 export const consultationStatusEnum = pgEnum('consultation_status', ['SCHEDULED', 'DONE', 'MISSED', 'CANCELED']);
-export const prescriptionStatusEnum = pgEnum('prescription_status', ['SENT', 'PREPARING', 'READY', 'DELIVERED', 'CANCELED']);
+// AWAITING_PAYMENT = la pharmacie a donné son prix, la famille doit valider et payer avant préparation
+export const prescriptionStatusEnum = pgEnum('prescription_status', [
+  'SENT',
+  'AWAITING_PAYMENT',
+  'PREPARING',
+  'READY',
+  'DELIVERED',
+  'CANCELED',
+]);
+
+export const PAYMENT_METHODS = ['CARD', 'MOBILE_MONEY'] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+export const paymentMethodEnum = pgEnum('payment_method', PAYMENT_METHODS);
+export const paymentProviderEnum = pgEnum('payment_provider', ['STRIPE', 'TRANZAK']);
+export const paymentKindEnum = pgEnum('payment_kind', ['SUBSCRIPTION', 'MEDICATION']);
+export const PAYMENT_STATUSES = ['PENDING', 'SUCCEEDED', 'FAILED', 'CANCELED', 'REFUNDED'] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+export const paymentStatusEnum = pgEnum('payment_status', PAYMENT_STATUSES);
+export const currencyEnum = pgEnum('currency', ['EUR', 'XAF']);
 export const deliveryStatusEnum = pgEnum('delivery_status', ['PENDING', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'FAILED']);
 export const readingTypeEnum = pgEnum('reading_type', READING_TYPES);
 export const readingSourceEnum = pgEnum('reading_source', ['WHATSAPP', 'NURSE', 'DOCTOR']);
@@ -63,6 +85,7 @@ export const users = pgTable('users', {
   lastName: text('last_name').notNull(),
   phone: text('phone'),
   isActive: boolean('is_active').notNull().default(true),
+  stripeCustomerId: text('stripe_customer_id').unique(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -195,11 +218,61 @@ export const subscriptions = pgTable('subscriptions', {
     .references(() => users.id),
   plan: planEnum('plan').notNull(),
   status: subscriptionStatusEnum('status').notNull().default('PENDING'),
+  paymentMethod: paymentMethodEnum('payment_method'), // choisi au premier paiement
   currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
+  // Mobile Money : nouvelle formule appliquée au prochain renouvellement
+  pendingPlan: planEnum('pending_plan'),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
   canceledAt: timestamp('canceled_at', { withTimezone: true }),
+  signupFeePaidAt: timestamp('signup_fee_paid_at', { withTimezone: true }),
+  stripeSubscriptionId: text('stripe_subscription_id').unique(),
+  // Relances : dernier rappel envoyé (avant échéance ou après impayé), pour ne pas envoyer deux fois le même
+  lastReminderAt: timestamp('last_reminder_at', { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
+
+// Numérotation continue des factures, sans trou ni doublon même si deux paiements arrivent en même temps
+export const invoiceNumberSeq = pgSequence('invoice_number_seq', { startWith: 1 });
+
+export const payments = pgTable(
+  'payments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    payerId: uuid('payer_id')
+      .notNull()
+      .references(() => users.id),
+    patientId: uuid('patient_id')
+      .notNull()
+      .references(() => patients.id, { onDelete: 'cascade' }),
+    subscriptionId: uuid('subscription_id').references(() => subscriptions.id, { onDelete: 'set null' }),
+    prescriptionId: uuid('prescription_id').references(() => prescriptions.id, { onDelete: 'set null' }),
+    kind: paymentKindEnum('kind').notNull(),
+    provider: paymentProviderEnum('provider').notNull(),
+    method: paymentMethodEnum('method').notNull(),
+    status: paymentStatusEnum('status').notNull().default('PENDING'),
+    // Montant en plus petite unité : centimes pour EUR, francs pour XAF (pas de décimales)
+    amount: integer('amount').notNull(),
+    currency: currencyEnum('currency').notNull(),
+    // Détail de ce qui est payé : [{ "label": "Formule Essentiel, novembre 2026", "amount": 2500 }]
+    lines: jsonb('lines').notNull(),
+    plan: planEnum('plan'),
+    includesSignupFee: boolean('includes_signup_fee').notNull().default(false),
+    periodStart: timestamp('period_start', { withTimezone: true }),
+    periodEnd: timestamp('period_end', { withTimezone: true }),
+    providerRef: text('provider_ref'), // requestId Tranzak, facture ou session Stripe
+    mobileWalletNumber: text('mobile_wallet_number'),
+    failureReason: text('failure_reason'),
+    invoiceNumber: text('invoice_number').unique(), // attribué au paiement réussi : PS-2026-000001
+    paidAt: timestamp('paid_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('payments_payer_idx').on(t.payerId, t.createdAt),
+    uniqueIndex('payments_provider_ref_uq').on(t.provider, t.providerRef),
+  ],
+);
 
 // ---------- Soins ----------
 
@@ -301,3 +374,5 @@ export const auditLogs = pgTable(
 export type User = typeof users.$inferSelect;
 export type PartnerProfile = typeof partnerProfiles.$inferSelect;
 export type Patient = typeof patients.$inferSelect;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type Payment = typeof payments.$inferSelect;

@@ -6,6 +6,8 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
+import { ScheduleModule } from '@nestjs/schedule';
+import { BillingModule } from './billing/billing.module';
 import { CoverageModule } from './coverage/coverage.module';
 import { DbModule } from './db/db.module';
 import { HealthController } from './health.controller';
@@ -27,6 +29,8 @@ import { UsersModule } from './users/users.module';
     CoverageModule,
     PatientsModule,
     MessagesModule,
+    ScheduleModule.forRoot(),
+    BillingModule,
   ],
   controllers: [HealthController],
   providers: [

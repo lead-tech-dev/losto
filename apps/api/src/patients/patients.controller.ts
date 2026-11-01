@@ -5,7 +5,7 @@ import { Public } from '../auth/decorators/public.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../db/schema';
 import { ConsentService } from './consent.service';
-import { ChangePlanDto, CreatePatientDto, InviteDto, ReadingsQueryDto, UpdatePatientDto } from './dto/patient.dto';
+import { CreatePatientDto, InviteDto, ReadingsQueryDto, UpdatePatientDto } from './dto/patient.dto';
 import { FamilyService } from './family.service';
 import { PatientRecordsService } from './patient-records.service';
 import { PatientsService } from './patients.service';
@@ -40,11 +40,6 @@ export class PatientsController {
   @Patch(':id')
   update(@CurrentUser() u: AuthUser, @Id() id: string, @Body() dto: UpdatePatientDto) {
     return this.patients.update(u.id, id, dto);
-  }
-
-  @Patch(':id/plan')
-  changePlan(@CurrentUser() u: AuthUser, @Id() id: string, @Body() dto: ChangePlanDto) {
-    return this.patients.changePlan(u.id, id, dto);
   }
 
   @Get(':id/dashboard')

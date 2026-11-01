@@ -132,12 +132,16 @@ describe('Espace famille', () => {
   describe('formule et dossier', () => {
     it('change la formule tant que le paiement est en attente', async () => {
       const res = await http().patch(`/api/patients/${patientId}/plan`).set(as(a)).send({ plan: 'SERENITE' }).expect(200);
-      expect(res.body.subscription).toMatchObject({ plan: 'SERENITE', priceEur: 45 });
+      expect(res.body).toMatchObject({ plan: 'SERENITE', priceEur: 45, pendingPlan: null });
     });
 
-    it('bloque le changement direct une fois l’abonnement actif', async () => {
-      await db.update(subscriptions).set({ status: 'ACTIVE' }).where(eq(subscriptions.patientId, patientId));
-      await http().patch(`/api/patients/${patientId}/plan`).set(as(a)).send({ plan: 'ESSENTIEL' }).expect(409);
+    it('une fois le mois payé, la nouvelle formule attend le prochain paiement', async () => {
+      await db
+        .update(subscriptions)
+        .set({ status: 'ACTIVE', paymentMethod: 'MOBILE_MONEY' })
+        .where(eq(subscriptions.patientId, patientId));
+      const res = await http().patch(`/api/patients/${patientId}/plan`).set(as(a)).send({ plan: 'ESSENTIEL' }).expect(200);
+      expect(res.body).toMatchObject({ plan: 'SERENITE', pendingPlan: 'ESSENTIEL' });
     });
 
     it('le titulaire modifie le dossier', async () => {

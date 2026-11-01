@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { api } from '../../../api';
 import PatientForm, { PatientFormValues, toPayload } from '../../../components/PatientForm';
-import PlanPicker from '../../../components/PlanPicker';
 import { CITY_LABELS, CONDITION_LABELS } from '../../../labels';
 import { PatientDetail } from '../../../types';
 
 interface Props {
   patient: PatientDetail;
   onSaved: (p: PatientDetail) => void;
-  onPlanChanged: () => void;
 }
 
 const toForm = (p: PatientDetail): PatientFormValues => ({
@@ -26,7 +24,7 @@ const toForm = (p: PatientDetail): PatientFormValues => ({
   notes: p.notes ?? '',
 });
 
-export default function DossierTab({ patient, onSaved, onPlanChanged }: Props) {
+export default function DossierTab({ patient, onSaved }: Props) {
   const [saved, setSaved] = useState(false);
 
   // Un proche invité voit le dossier en lecture seule
@@ -34,9 +32,6 @@ export default function DossierTab({ patient, onSaved, onPlanChanged }: Props) {
 
   return (
     <div className="stack">
-      {patient.subscription?.status === 'PENDING' && (
-        <PlanSection patient={patient} onChanged={onPlanChanged} />
-      )}
       {saved && <div className="notice notice-ok">Dossier enregistré.</div>}
       <PatientForm
         key={patient.id}
@@ -56,28 +51,6 @@ export default function DossierTab({ patient, onSaved, onPlanChanged }: Props) {
   );
 }
 
-function PlanSection({ patient, onChanged }: { patient: PatientDetail; onChanged: () => void }) {
-  const [error, setError] = useState('');
-  return (
-    <section className="card">
-      <h3>Formule</h3>
-      <PlanPicker
-        value={patient.subscription!.plan}
-        onChange={async (plan) => {
-          setError('');
-          try {
-            await api(`/patients/${patient.id}/plan`, { method: 'PATCH', body: JSON.stringify({ plan }) });
-            onChanged();
-          } catch (e) {
-            setError((e as Error).message);
-          }
-        }}
-      />
-      <p className="muted small">Vous pouvez changer de formule librement tant que le premier paiement n'est pas fait.</p>
-      {error && <p className="error">{error}</p>}
-    </section>
-  );
-}
 
 function ReadOnlyDossier({ p }: { p: PatientDetail }) {
   const rows: [string, string | null][] = [

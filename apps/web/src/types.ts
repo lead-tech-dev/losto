@@ -2,7 +2,7 @@
 
 export interface Subscription {
   plan: 'ESSENTIEL' | 'SERENITE';
-  status: 'PENDING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
+  status: 'PENDING' | 'ACTIVE' | 'PAST_DUE' | 'SUSPENDED' | 'CANCELED';
   priceEur: number;
   currentPeriodEnd: string | null;
 }
@@ -98,3 +98,46 @@ export interface Message {
   createdAt: string;
   readAt: string | null;
 }
+
+export interface PaymentLine {
+  label: string;
+  amount: number;
+}
+
+export interface PaymentView {
+  id: string;
+  kind: 'SUBSCRIPTION' | 'MEDICATION';
+  method: 'CARD' | 'MOBILE_MONEY';
+  status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'CANCELED' | 'REFUNDED';
+  amount: number;
+  currency: 'EUR' | 'XAF';
+  amountLabel: string;
+  lines: PaymentLine[];
+  plan: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  invoiceNumber: string | null;
+  failureReason: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  patientId: string;
+  patientName?: string;
+}
+
+export interface SubscriptionView {
+  role: 'OWNER' | 'MEMBER';
+  status: 'PENDING' | 'ACTIVE' | 'PAST_DUE' | 'SUSPENDED' | 'CANCELED';
+  plan: 'ESSENTIEL' | 'SERENITE';
+  pendingPlan: 'ESSENTIEL' | 'SERENITE' | null;
+  paymentMethod: 'CARD' | 'MOBILE_MONEY' | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  priceEur: number;
+  nextPayment: { plan: string; eur: number; xaf: number; includesSignupFee: boolean };
+  canPay: { card: boolean; mobileMoney: boolean; reason: string | null };
+  pendingPayment: PaymentView | null;
+  cardConfigured: boolean;
+  mobileMoneyConfigured: boolean;
+}
+
+export type CheckoutResult = { kind: 'redirect'; url: string } | { kind: 'mobile'; payment: PaymentView };

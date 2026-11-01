@@ -15,6 +15,13 @@
       "when": 1793492291603,
       "tag": "0001_espace_famille",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793524361202,
+      "tag": "0002_paiements",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,8 @@ import Dashboard from './pages/Dashboard';
 import MessagesPage from './pages/family/MessagesPage';
 import NewParent from './pages/family/NewParent';
 import ParentPage from './pages/family/ParentPage';
+import PaymentPage from './pages/family/PaymentPage';
+import PaymentsPage from './pages/family/PaymentsPage';
 import Login from './pages/Login';
 import { ForgotPassword, ResetPassword } from './pages/PasswordPages';
 import ProfilePage from './pages/ProfilePage';
@@ -43,6 +45,8 @@ export default function App() {
       {/* Espace famille */}
       <Route path="/parents/nouveau" element={<Protected role="FAMILY"><NewParent /></Protected>} />
       <Route path="/parents/:id" element={<Protected role="FAMILY"><ParentPage /></Protected>} />
+      <Route path="/parents/:id/paiement" element={<Protected role="FAMILY"><PaymentPage /></Protected>} />
+      <Route path="/paiements" element={<Protected role="FAMILY"><PaymentsPage /></Protected>} />
       <Route path="/messages" element={<Protected role="FAMILY"><MessagesPage /></Protected>} />
 
       {/* Admin */}
